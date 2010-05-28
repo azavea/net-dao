@@ -21,27 +21,31 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-using System;
-
-namespace Azavea.Open.DAO.Exceptions
+namespace Azavea.Open.DAO
 {
     /// <summary>
-    /// This exception is thrown when we are unable to connect to a database.
+    /// Represents a transaction (a guarauntee that a series of operations are
+    /// executed against a connection without any other operations from other
+    /// connections interfering).
+    /// 
+    /// NOTE: You MUST call Commit or Rollback when done!  If you do not, the destructor
+    /// (assuming a nice shutdown where the destructor is called) will attempt to call
+    /// Rollback, however this is just a "nice" attempt to clean up, and will not happen
+    /// until the garbage collector collects this object, so it should not be relied upon.
     /// </summary>
-    public class UnableToConnectException : ExceptionWithConnectionInfo
+    public interface ITransaction
     {
         /// <summary>
-        /// Unable to establish a database connection.
+        /// Writes all the statements executed as part of this transaction to the
+        /// database.  Until this is called, none of the inserts/updates/deletes
+        /// you do will be visible to any other users of the database.
         /// </summary>
-        /// <param name="desc">Connection descriptor we were using to try to connect.</param>
-        /// <param name="numTimes">How many times in a row have we failed to connect, if
-        ///                        known.  This is used in the message only if it is greater
-        ///                        than 1.</param>
-        /// <param name="e">Exception that was thrown by the database driver.</param>
-        public UnableToConnectException(IConnectionDescriptor desc, int numTimes, Exception e)
-            : base("Unable to connect to database" +
-                   ((numTimes > 1) ? (" (" + numTimes + " time(s) in a row).") : "."), desc, e)
-        {
-        }
+        void Commit();
+
+        /// <summary>
+        /// Undoes all the statements executed as part of this transaction.  The
+        /// database will be as though you never executed them.
+        /// </summary>
+        void Rollback();
     }
 }

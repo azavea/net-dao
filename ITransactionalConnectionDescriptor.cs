@@ -24,24 +24,27 @@
 namespace Azavea.Open.DAO
 {
     /// <summary>
-    /// This interface defines the most basic methods on a FastDAO, regardless of which
-    /// interfaces it implements.
+    /// If the data source supports transactions (multiple operations as an atomic unit)
+    /// (such as most databases) the connection descriptor will implement this interface.
+    /// 
+    /// Usage: First call BeginTransaction, then pass the new ConnectionDescriptor
+    ///        it gives you to every subsequent call (if you call a method but
+    ///        do not pass the new ConnectionDescriptor, the method will not happen as part
+    ///        of this transaction).  When complete, call Commit (or Rollback if
+    ///        something went wrong).
+    /// 
+    /// NOTE: Since it is now up to you to complete the transaction, this is likely no longer threadsafe.
     /// </summary>
-    /// <typeparam name="T">The type of object that can be deleted.</typeparam>
-// ReSharper disable UnusedTypeParameter
-    public interface IFastDaoBase<T> where T : class, new()
-// ReSharper restore UnusedTypeParameter
+    public interface ITransactionalConnectionDescriptor : IConnectionDescriptor
     {
         /// <summary>
-        /// The ClassMapping object representing the class-to-record mapping 
-        /// to use with the data source.
+        /// Begins the transaction.  Returns a NEW ConnectionDescriptor that you should
+        /// use for operations you wish to be part of the transaction.
+        /// 
+        /// NOTE: You MUST call Commit or Rollback on the returned ITransaction when you are done.
         /// </summary>
-        ClassMapping ClassMap { get; }
-
-        /// <summary>
-        /// The object describing how to connect to and/or interact with the data
-        /// source we're reading objects from.
-        /// </summary>
-        IConnectionDescriptor ConnDesc { get; }
+        /// <returns>The ConnectionDescriptor object to pass to calls that you wish to have
+        ///          happen as part of this transaction.</returns>
+        ITransaction BeginTransaction();
     }
 }

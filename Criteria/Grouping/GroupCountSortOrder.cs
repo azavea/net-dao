@@ -1,4 +1,4 @@
-// Copyright (c) 2004-2010 Azavea, Inc.
+﻿// Copyright (c) 2004-2010 Azavea, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -21,26 +21,28 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-using System;
-
-namespace Azavea.Open.DAO.Exceptions
+namespace Azavea.Open.DAO.Criteria.Grouping
 {
     /// <summary>
-    /// This exception is thrown when we are unable to connect to a database.
+    /// This can be used to indicate you want to sort based on the count
+    /// in a count where you're aggregating values.
     /// </summary>
-    public class UnableToConnectException : ExceptionWithConnectionInfo
+    public class GroupCountSortOrder : SortOrder
     {
         /// <summary>
-        /// Unable to establish a database connection.
+        /// Default sort order is ascending.
         /// </summary>
-        /// <param name="desc">Connection descriptor we were using to try to connect.</param>
-        /// <param name="numTimes">How many times in a row have we failed to connect, if
-        ///                        known.  This is used in the message only if it is greater
-        ///                        than 1.</param>
-        /// <param name="e">Exception that was thrown by the database driver.</param>
-        public UnableToConnectException(IConnectionDescriptor desc, int numTimes, Exception e)
-            : base("Unable to connect to database" +
-                   ((numTimes > 1) ? (" (" + numTimes + " time(s) in a row).") : "."), desc, e)
+        public GroupCountSortOrder()
+            : base("Count")
+        {
+        }
+
+        /// <summary>
+        /// Lets you specify the sort direction.
+        /// </summary>
+        /// <param name="direction">Do you want counts going up or down?</param>
+        public GroupCountSortOrder(SortType direction)
+            : base("Count", direction)
         {
         }
     }

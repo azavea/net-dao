@@ -1,4 +1,4 @@
-// Copyright (c) 2004-2010 Azavea, Inc.
+﻿// Copyright (c) 2004-2010 Azavea, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -21,26 +21,21 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-using System;
-
 namespace Azavea.Open.DAO.Exceptions
 {
     /// <summary>
-    /// This exception is thrown when we are unable to connect to a database.
+    /// This exception is thrown when trying to close or finish something that
+    /// has already been closed or finished (I.E. committing a transaction more than once).
     /// </summary>
-    public class UnableToConnectException : ExceptionWithConnectionInfo
+    public class AlreadyTerminatedException : ExceptionWithConnectionInfo
     {
         /// <summary>
-        /// Unable to establish a database connection.
+        /// This has already been closed/terminated/etc.
         /// </summary>
-        /// <param name="desc">Connection descriptor we were using to try to connect.</param>
-        /// <param name="numTimes">How many times in a row have we failed to connect, if
-        ///                        known.  This is used in the message only if it is greater
-        ///                        than 1.</param>
-        /// <param name="e">Exception that was thrown by the database driver.</param>
-        public UnableToConnectException(IConnectionDescriptor desc, int numTimes, Exception e)
-            : base("Unable to connect to database" +
-                   ((numTimes > 1) ? (" (" + numTimes + " time(s) in a row).") : "."), desc, e)
+        /// <param name="desc">Connection descriptor we were using.</param>
+        /// <param name="message">What was already terminated.</param>
+        public AlreadyTerminatedException(IConnectionDescriptor desc, string message)
+            : base(message, desc, null)
         {
         }
     }

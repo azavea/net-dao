@@ -1,4 +1,4 @@
-// Copyright (c) 2004-2010 Azavea, Inc.
+﻿// Copyright (c) 2004-2010 Azavea, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -21,27 +21,26 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-using System;
-
-namespace Azavea.Open.DAO.Exceptions
+namespace Azavea.Open.DAO.Criteria.Grouping
 {
     /// <summary>
-    /// This exception is thrown when we are unable to connect to a database.
+    /// Base class for group expressions.
     /// </summary>
-    public class UnableToConnectException : ExceptionWithConnectionInfo
+    public abstract class AbstractGroupExpression
     {
         /// <summary>
-        /// Unable to establish a database connection.
+        /// Name of the grouping, I.E. this is what shows up as
+        /// a key in the dictionary in the GroupCountResult.
         /// </summary>
-        /// <param name="desc">Connection descriptor we were using to try to connect.</param>
-        /// <param name="numTimes">How many times in a row have we failed to connect, if
-        ///                        known.  This is used in the message only if it is greater
-        ///                        than 1.</param>
-        /// <param name="e">Exception that was thrown by the database driver.</param>
-        public UnableToConnectException(IConnectionDescriptor desc, int numTimes, Exception e)
-            : base("Unable to connect to database" +
-                   ((numTimes > 1) ? (" (" + numTimes + " time(s) in a row).") : "."), desc, e)
+        public readonly string Name;
+
+        /// <summary>
+        /// Initializes the grouping expression with its name.
+        /// </summary>
+        /// <param name="name"></param>
+        protected AbstractGroupExpression(string name)
         {
+            Name = name;
         }
     }
 }

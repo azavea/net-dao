@@ -26,21 +26,17 @@ using System;
 namespace Azavea.Open.DAO.Exceptions
 {
     /// <summary>
-    /// This exception is thrown when we are unable to connect to a database.
+    /// This exception is thrown when we are unable to begin a transaction.
     /// </summary>
-    public class UnableToConnectException : ExceptionWithConnectionInfo
+    public class UnableToCreateTransactionException : ExceptionWithConnectionInfo
     {
         /// <summary>
-        /// Unable to establish a database connection.
+        /// Unable to begin a transaction against the database.
         /// </summary>
         /// <param name="desc">Connection descriptor we were using to try to connect.</param>
-        /// <param name="numTimes">How many times in a row have we failed to connect, if
-        ///                        known.  This is used in the message only if it is greater
-        ///                        than 1.</param>
         /// <param name="e">Exception that was thrown by the database driver.</param>
-        public UnableToConnectException(IConnectionDescriptor desc, int numTimes, Exception e)
-            : base("Unable to connect to database" +
-                   ((numTimes > 1) ? (" (" + numTimes + " time(s) in a row).") : "."), desc, e)
+        public UnableToCreateTransactionException(IConnectionDescriptor desc, Exception e)
+            : base("Unable to begin a transaction.", desc, e)
         {
         }
     }

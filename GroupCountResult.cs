@@ -1,4 +1,4 @@
-// Copyright (c) 2004-2010 Azavea, Inc.
+﻿// Copyright (c) 2004-2010 Azavea, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -22,26 +22,38 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 using System;
+using System.Collections.Generic;
 
-namespace Azavea.Open.DAO.Exceptions
+namespace Azavea.Open.DAO
 {
     /// <summary>
-    /// This exception is thrown when we are unable to connect to a database.
+    /// Represents the results from a count of records grouped (aggregated) by some
+    /// field or fields.
     /// </summary>
-    public class UnableToConnectException : ExceptionWithConnectionInfo
+    public class GroupCountResult
     {
         /// <summary>
-        /// Unable to establish a database connection.
+        /// The number of results found with this combination of group values.
         /// </summary>
-        /// <param name="desc">Connection descriptor we were using to try to connect.</param>
-        /// <param name="numTimes">How many times in a row have we failed to connect, if
-        ///                        known.  This is used in the message only if it is greater
-        ///                        than 1.</param>
-        /// <param name="e">Exception that was thrown by the database driver.</param>
-        public UnableToConnectException(IConnectionDescriptor desc, int numTimes, Exception e)
-            : base("Unable to connect to database" +
-                   ((numTimes > 1) ? (" (" + numTimes + " time(s) in a row).") : "."), desc, e)
+        public readonly int Count;
+        /// <summary>
+        /// The combination of group values that occurs Count times in the
+        /// data source.  Group values are a single set of unique values
+        /// for the fields you grouped by, with key being the name of the
+        /// grouping and value being the value (I.E. key is "Type" value is "1"
+        /// and key is "FirstName" value is "Bob", Count would then be the
+        /// number of records in the data source with a Type of "1" and a
+        /// FirstName of "Bob".
+        /// </summary>
+        public readonly IDictionary<string, object> GroupValues;
+
+        /// <summary>
+        /// Creates the result.
+        /// </summary>
+        public GroupCountResult(int count, IDictionary<string,object> values)
         {
+            Count = count;
+            GroupValues = values;
         }
     }
 }
