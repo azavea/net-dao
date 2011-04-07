@@ -23,7 +23,7 @@
 		<id name="ID" column="ID">
 			<generator class="native"/>
 		</id>
-		<property name="BoolVal" column="BoolCol" type="integer"/>
+		<property name="BoolVal" column="BoolCol"/>
 		<property name="IntVal" column="IntCol"/>
 		<property name="DateVal" column="DateCol" type="date"/>
 		<property name="FloatVal" column="FloatCol"/>

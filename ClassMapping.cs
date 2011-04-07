@@ -304,6 +304,42 @@ namespace Azavea.Open.DAO
             {
                 return typeof (byte[]);
             }
+            if (lowerInput.Equals("int?") || lowerInput.Equals("integer?") || lowerInput.Equals("int32?"))
+            {
+                return typeof(int?);
+            }
+            if (lowerInput.Equals("long?") || lowerInput.Equals("int64?"))
+            {
+                return typeof(long?);
+            }
+            if (lowerInput.Equals("double?"))
+            {
+                return typeof(double?);
+            }
+            if (lowerInput.Equals("date?") || lowerInput.Equals("datetime?"))
+            {
+                return typeof(DateTime?);
+            }
+            if (lowerInput.Equals("bool?") || lowerInput.Equals("boolean?"))
+            {
+                return typeof(bool?);
+            }
+            if (lowerInput.Equals("short?") || lowerInput.Equals("int16?"))
+            {
+                return typeof(short?);
+            }
+            if (lowerInput.Equals("byte?"))
+            {
+                return typeof(byte?);
+            }
+            if (lowerInput.Equals("char?"))
+            {
+                return typeof(char?);
+            }
+            if (lowerInput.Equals("float?"))
+            {
+                return typeof(float?);
+            } 
             Type colType = Type.GetType(input, false);
             if (colType != null)
             {

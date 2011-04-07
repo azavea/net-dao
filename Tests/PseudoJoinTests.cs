@@ -36,7 +36,7 @@ namespace Azavea.Open.DAO.Tests
             : base(
                 new FastDAO<JoinClass1>(new Config("..\\..\\Tests\\MemoryDao.config", "MemoryDaoConfig"), "DAO"),
                 new FastDAO<JoinClass2>(new Config("..\\..\\Tests\\MemoryDao.config", "MemoryDaoConfig"), "DAO2"),
-                false, true, true, true) { }
+                false, true, true, true, true) { }
 
         /// <exclude/>
         [TestFixtureSetUp]

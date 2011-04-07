@@ -250,14 +250,18 @@ namespace Azavea.Open.DAO
             {
                 if (kvp.Value.Equals(colName))
                 {
-                    // We'll go ahead and coerce the type, although
-                    // the db "should" give it to us as the mapped type.
-                    // Not all data sources do however, so this is the best
-                    // we can do.
-                    Type desiredType = classMap.DataColTypesByObjAttr[classMap.AllObjAttrsByDataCol[colName]];
-                    if (desiredType != null)
+                    // Don't coerce nulls.
+                    if (memberValue != null)
                     {
-                        memberValue = _dataAccessLayer.CoerceType(desiredType, memberValue);
+                        // We'll go ahead and coerce the type, although
+                        // the db "should" give it to us as the mapped type.
+                        // Not all data sources do however, so this is the best
+                        // we can do.
+                        Type desiredType = classMap.DataColTypesByObjAttr[classMap.AllObjAttrsByDataCol[colName]];
+                        if (desiredType != null)
+                        {
+                            memberValue = _dataAccessLayer.CoerceType(desiredType, memberValue);
+                        }
                     }
                     dataObj[kvp.Key] = memberValue;
                 }

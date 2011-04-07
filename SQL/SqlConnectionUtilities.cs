@@ -285,6 +285,58 @@ namespace Azavea.Open.DAO.SQL
 
         /// <summary>
         /// Similar to the "XSafeQuery" method, except this executes a
+        /// query that returns a single boolean.
+        /// </summary>
+        /// <param name="connDesc">The database connection descriptor.  This is used both as
+        ///                        a key for caching connections/commands as well as for
+        ///                        getting the actual database connection the first time.</param>
+        /// <param name="sql">The SQL query to execute.</param>
+        /// <param name="sqlParams">A list of objects to use as parameters
+        ///							to the SQL statement.  The list may be
+        ///							null if there are no parameters.</param>
+        /// <returns>The boolean returned by the query.</returns>
+        public static bool XSafeBoolQuery(AbstractSqlConnectionDescriptor connDesc, string sql,
+                                        IEnumerable sqlParams)
+        {
+            return XSafeBoolQuery(connDesc, null, sql, sqlParams);
+        }
+
+        /// <summary>
+        /// Similar to the "XSafeQuery" method, except this executes a
+        /// query that returns a single boolean.
+        /// </summary>
+        /// <param name="connDesc">The database connection descriptor.  This is used both as
+        ///                        a key for caching connections/commands as well as for
+        ///                        getting the actual database connection the first time.</param>
+        /// <param name="transaction">The transaction to do this as part of.</param>
+        /// <param name="sql">The SQL query to execute.</param>
+        /// <param name="sqlParams">A list of objects to use as parameters
+        ///							to the SQL statement.  The list may be
+        ///							null if there are no parameters.</param>
+        /// <returns>The boolean returned by the query.</returns>
+        public static bool XSafeBoolQuery(AbstractSqlConnectionDescriptor connDesc,
+            SqlTransaction transaction, string sql, IEnumerable sqlParams)
+        {
+            bool retVal;
+            object retObj = XSafeScalarQuery(connDesc, transaction, sql, sqlParams);
+            try
+            {
+                if (retObj == null)
+                {
+                    throw new NullReferenceException(
+                        "The sql query should have returned a boolean, but returned null instead.");
+                }
+                retVal = Convert.ToBoolean(retObj);
+            }
+            catch (Exception e)
+            {
+                throw new UnableToProcessSqlResultsException("Result was not boolean. ",
+                                                             connDesc, sql, sqlParams, e);
+            }
+            return retVal;
+        }
+        /// <summary>
+        /// Similar to the "XSafeQuery" method, except this executes a
         /// query that returns a single DateTime (such as SELECT MAX(DateField)).
         /// </summary>
         /// <param name="connDesc">The database connection descriptor.  This is used both as
@@ -1107,7 +1159,7 @@ namespace Azavea.Open.DAO.SQL
         /// </summary>
         /// <param name="connDesc">Connection descriptor for the database.</param>
         /// <param name="name">The name of the type of object you want schema info on.
-        ///                    For example, "Columns" to get info on the coluns.</param>
+        ///                    For example, "Columns" to get info on the columns.</param>
         /// <param name="restrictions">A magic string array that means something to
         ///                            DbConnection.GetSchema.  Should be a string array
         ///                            of the following restrictions:

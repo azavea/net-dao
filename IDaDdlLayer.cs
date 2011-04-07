@@ -74,6 +74,8 @@ namespace Azavea.Open.DAO
         /// 
         /// If the data source supports indexes, but support for deleting them is not yet
         /// implemented, this should throw a NotImplementedException.
+        /// 
+        /// If there is no index with the given name, this should be a no-op.
         /// </summary>
         /// <param name="name">Name of the index to delete.</param>
         /// <param name="mapping">ClassMapping for the data that was being indexed.</param>
@@ -103,6 +105,8 @@ namespace Azavea.Open.DAO
         /// 
         /// If the data source supports sequences, but support for deleting them is not yet
         /// implemented, this should throw a NotImplementedException.
+        /// 
+        /// If there is no sequence with the given name, this should be a no-op.
         /// </summary>
         /// <param name="name">Name of the sequence to delete.</param>
         void DeleteSequence(string name);
@@ -130,6 +134,8 @@ namespace Azavea.Open.DAO
         /// them is not implemented yet, this should throw a NotImplementedException.
         /// 
         /// Store house typically corresponds to "database".
+        /// 
+        /// If there is no store house with the given name, this should be a no-op.
         /// </summary>
         void DeleteStoreHouse();
         /// <summary>
@@ -163,6 +169,8 @@ namespace Azavea.Open.DAO
         /// them is not implemented yet, this should throw a NotImplementedException.
         /// 
         /// Store room typically corresponds to "table".
+        /// 
+        /// If there is no store room with the given name, this should be a no-op.
         /// </summary>
         /// <param name="mapping">ClassMapping for the data that was stored in this room.</param>
         void DeleteStoreRoom(ClassMapping mapping);
@@ -174,9 +182,10 @@ namespace Azavea.Open.DAO
         /// 
         /// Store room typically corresponds to "table".
         /// </summary>
+        /// <param name="mapping">ClassMapping for the data that is stored in this room.</param>
         /// <returns>Returns true if you need to call "CreateStoreRoom"
         ///          before storing any data.</returns>
-        bool StoreRoomMissing();
+        bool StoreRoomMissing(ClassMapping mapping);
         /// <summary>
         /// Uses some form of introspection to determine what data is stored in
         /// this data store, and generates a ClassMapping that can be immediately

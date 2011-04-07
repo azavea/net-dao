@@ -95,6 +95,18 @@ namespace Azavea.Open.DAO
             get { return _connDesc; }
         }
 
+        /// <summary>
+        /// The lower-level object with more direct database access.  You should only
+        /// ever use this if you're trying to do something complicated that the FastDAO
+        /// interface doesn't expose.
+        /// 
+        /// NOTE: Using this directly can be less efficient if you are not careful.
+        /// </summary>
+        public IDaLayer DataAccessLayer
+        {
+            get { return _dataAccessLayer; }
+        }
+
         #region Constructors
         /// <summary>
         /// This allows you to specify the config name and the section in the config file

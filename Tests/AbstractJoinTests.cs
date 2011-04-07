@@ -34,16 +34,19 @@ namespace Azavea.Open.DAO.Tests
     /// </summary>
     public abstract class AbstractJoinTests
     {
-        private readonly IFastDaoReader<JoinClass1> _dao1;
-        private readonly IFastDaoReader<JoinClass2> _dao2;
+        private readonly FastDAO<JoinClass1> _dao1;
+        private readonly FastDAO<JoinClass2> _dao2;
         private readonly bool _expectNullsFirst;
         private readonly bool _supportsLeftOuter;
         private readonly bool _supportsRightOuter;
         private readonly bool _supportsFullOuter;
+        private readonly bool _supportsNonMergeJoinableOuter;
 
         /// <exclude/>
-        protected AbstractJoinTests(IFastDaoReader<JoinClass1> dao1, IFastDaoReader<JoinClass2> dao2,
-                                    bool expectNullsFirst, bool supportsLeftOuter, bool supportsRightOuter, bool supportsFullOuter)
+        protected AbstractJoinTests(FastDAO<JoinClass1> dao1, FastDAO<JoinClass2> dao2,
+            bool expectNullsFirst, bool supportsLeftOuter,
+            bool supportsRightOuter, bool supportsFullOuter,
+            bool supportsNonMergeJoinableOuter)
         {
             _dao1 = dao1;
             _dao2 = dao2;
@@ -51,6 +54,47 @@ namespace Azavea.Open.DAO.Tests
             _supportsLeftOuter = supportsLeftOuter;
             _supportsRightOuter = supportsRightOuter;
             _supportsFullOuter = supportsFullOuter;
+            _supportsNonMergeJoinableOuter = supportsNonMergeJoinableOuter;
+        }
+
+        /// <summary>
+        /// For child classes whose data access layers implement IDaDdlLayer, this will drop
+        /// and recreate all the tables used by this test.  Otherwise it will just truncate them.
+        /// 
+        /// It will then insert all rows needed for the tests.
+        /// </summary>
+        [TestFixtureSetUp]
+        public void ResetAllTables()
+        {
+            AbstractFastDAOTests.ResetTable(_dao1.DataAccessLayer, _dao1.ClassMap);
+            AbstractFastDAOTests.ResetTable(_dao2.DataAccessLayer, _dao2.ClassMap);
+            JoinClass1 temp1 = new JoinClass1();
+            temp1.JoinField = "one";
+            temp1.Name = "Bob";
+            _dao1.Insert(temp1);
+            temp1.JoinField = "two";
+            temp1.Name = "Alice";
+            _dao1.Insert(temp1);
+            temp1.JoinField = "three";
+            temp1.Name = "Charlie";
+            _dao1.Insert(temp1);
+            temp1.JoinField = "four";
+            temp1.Name = "Dave";
+            _dao1.Insert(temp1);
+            temp1.JoinField = "five";
+            temp1.Name = "Edmund";
+            _dao1.Insert(temp1);
+            JoinClass2 temp2 = new JoinClass2();
+            temp2.JoinField = "one";
+            _dao2.Insert(temp2);
+            temp2.JoinField = "two";
+            _dao2.Insert(temp2);
+            temp2.JoinField = "three";
+            _dao2.Insert(temp2);
+            temp2.JoinField = "4";
+            _dao2.Insert(temp2);
+            temp2.JoinField = "5";
+            _dao2.Insert(temp2);
         }
 
         /// <summary>
@@ -421,6 +465,10 @@ namespace Azavea.Open.DAO.Tests
             {
                 Assert.Ignore("This data source does not support full outer joins.");
             }
+            if (!_supportsNonMergeJoinableOuter)
+            {
+                Assert.Ignore("This data source only supports merge-joinable full outer joins.");
+            }
             DaoJoinCriteria crit = new DaoJoinCriteria(JoinType.Outer,
                                                        new GreaterJoinExpression("JoinField", "JoinField"));
             crit.Orders.Add(new JoinSortOrder("ID", true));
@@ -448,6 +496,10 @@ namespace Azavea.Open.DAO.Tests
             if (!_supportsFullOuter)
             {
                 Assert.Ignore("This data source does not support full outer joins.");
+            }
+            if (!_supportsNonMergeJoinableOuter)
+            {
+                Assert.Ignore("This data source only supports merge-joinable full outer joins.");
             }
             DaoJoinCriteria crit = new DaoJoinCriteria(JoinType.Outer,
                                                        new GreaterJoinExpression("JoinField", "JoinField"));
@@ -576,6 +628,10 @@ namespace Azavea.Open.DAO.Tests
             {
                 Assert.Ignore("This data source does not support full outer joins.");
             }
+            if (!_supportsNonMergeJoinableOuter)
+            {
+                Assert.Ignore("This data source only supports merge-joinable full outer joins.");
+            }
             DaoJoinCriteria crit = new DaoJoinCriteria(JoinType.Outer,
                                                        new LesserJoinExpression("JoinField", "JoinField"));
             crit.Orders.Add(new JoinSortOrder("ID", true));
@@ -603,6 +659,10 @@ namespace Azavea.Open.DAO.Tests
             if (!_supportsFullOuter)
             {
                 Assert.Ignore("This data source does not support full outer joins.");
+            }
+            if (!_supportsNonMergeJoinableOuter)
+            {
+                Assert.Ignore("This data source only supports merge-joinable full outer joins.");
             }
             DaoJoinCriteria crit = new DaoJoinCriteria(JoinType.Outer,
                                                        new LesserJoinExpression("JoinField", "JoinField"));

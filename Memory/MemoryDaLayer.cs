@@ -531,7 +531,7 @@ namespace Azavea.Open.DAO.Memory
         /// </summary>
         /// <returns>Returns true if you need to call "CreateStoreRoom"
         ///          before storing any data.</returns>
-        public bool StoreRoomMissing()
+        public bool StoreRoomMissing(ClassMapping mapping)
         {
             return false;
         }
