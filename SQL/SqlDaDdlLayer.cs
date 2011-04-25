@@ -23,7 +23,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Text;
 using Azavea.Open.DAO.Util;
 
@@ -214,43 +213,6 @@ namespace Azavea.Open.DAO.SQL
                 SqlConnectionUtilities.XSafeCommand(_connDesc, statement, null);
             }
             DbCaches.StringBuilders.Return(sb);
-        }
-
-        /// <summary>
-        /// Given the class mapping and the column name, determines the appropriate
-        /// c# data type.
-        /// </summary>
-        /// <param name="col">Column to look up.</param>
-        /// <param name="mapping">Mapping for the class we're creating a table for.</param>
-        /// <returns>A C# type that will be stored in the column.</returns>
-        protected Type GetDataType(string col, ClassMapping mapping)
-        {
-            Type colType = null;
-            // Use the explicit type if there is one.
-            if (mapping.DataColTypesByDataCol.ContainsKey(col))
-            {
-                colType = mapping.DataColTypesByDataCol[col];
-            }
-            // Otherwise use the type of the member on the mapped object.
-            if ((colType == null) && (mapping.AllObjMemberInfosByDataCol.ContainsKey(col)))
-            {
-                MemberInfo info = mapping.AllObjMemberInfosByDataCol[col];
-                if (info is FieldInfo)
-                {
-                    colType = ((FieldInfo)info).FieldType;
-                }
-                else if (info is PropertyInfo)
-                {
-                    colType = ((PropertyInfo)info).PropertyType;
-                }
-            }
-            // Default behavior is assume string since pretty much everything can be stored
-            // as a string.  This should generally only happen for DictionaryDAOs.
-            if (colType == null)
-            {
-                colType = typeof(string);
-            }
-            return colType;
         }
 
         /// <summary>
