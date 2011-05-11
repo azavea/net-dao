@@ -652,8 +652,33 @@ namespace Azavea.Open.DAO.Unqueryable
             {
                 foreach (ColumnSortOrder order in _sortOrders)
                 {
-                    int valCompare = ((IComparable)_values[order.ColIndex]).CompareTo(
-                        other._values[order.ColIndex]);
+                    int valCompare;
+                    object thisVal = _values[order.ColIndex];
+                    object otherVal = other._values[order.ColIndex];
+                    // Make sure to handle nulls!
+                    if (thisVal == null)
+                    {
+                        if (otherVal == null)
+                        {
+                            valCompare = 0;
+                        }
+                        else
+                        {
+                            valCompare = 1;
+                        }
+                    }
+                    else
+                    {
+                        if (otherVal == null)
+                        {
+                            valCompare = -1;
+                        }
+                        else
+                        {
+                            // Actually compare.
+                            valCompare = ((IComparable) thisVal).CompareTo(otherVal);
+                        }
+                    }
                     if (valCompare != 0)
                     {
                         return order.Ascending ? valCompare : (valCompare * -1);
