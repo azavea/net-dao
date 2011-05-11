@@ -765,29 +765,13 @@ namespace Azavea.Open.DAO.Tests
             DaoCriteria crit = new DaoCriteria();
             SortOrder order = new SortOrder("ID", SortType.Asc);
             crit.Orders.Add(order);
+            DateTime xDate = new DateTime(2001, 1, 1);
             IList<NullableClass> objs = _nullDAO.Get(crit);
-            Assert.IsNotNull(objs, "Got null list.");
-            Assert.AreEqual(5, objs.Count, "Wrong number of records.");
-            Assert.AreEqual(null, (objs[0]).BoolVal, "first bool was wrong.");
-            Assert.AreEqual(true, (objs[1]).BoolVal, "second bool was wrong.");
-            Assert.AreEqual(true, (objs[2]).BoolVal, "third bool was wrong.");
-            Assert.AreEqual(true, (objs[3]).BoolVal, "fourth bool was wrong.");
-            Assert.AreEqual(true, (objs[4]).BoolVal, "fifth bool was wrong.");
-            Assert.AreEqual(null, (objs[0]).IntVal, "first int was wrong.");
-            Assert.AreEqual(null, (objs[1]).IntVal, "second int was wrong.");
-            Assert.AreEqual(123, (objs[2]).IntVal, "third int was wrong.");
-            Assert.AreEqual(123, (objs[3]).IntVal, "fourth int was wrong.");
-            Assert.AreEqual(123, (objs[4]).IntVal, "fifth int was wrong.");
-            Assert.AreEqual(null, (objs[0]).DateVal, "first date was wrong.");
-            Assert.AreEqual(null, (objs[1]).DateVal, "second date was wrong.");
-            Assert.AreEqual(null, (objs[2]).DateVal, "third date was wrong.");
-            Assert.AreEqual(new DateTime(2001, 1, 1), (objs[3]).DateVal, "fourth date was wrong.");
-            Assert.AreEqual(new DateTime(2001, 1, 1), (objs[4]).DateVal, "fifth date was wrong.");
-            Assert.AreEqual(null, (objs[0]).FloatVal, "first float was wrong.");
-            Assert.AreEqual(null, (objs[1]).FloatVal, "second float was wrong.");
-            Assert.AreEqual(null, (objs[2]).FloatVal, "third float was wrong.");
-            Assert.AreEqual(null, (objs[3]).FloatVal, "fourth float was wrong.");
-            Assert.AreEqual((float)4.56, (objs[4]).FloatVal, "fifth float was wrong.");
+            AssertNullableResults(objs,
+                new bool?[] { null, true, true, true, true },
+                new int?[] { null, null, 123, 123, 123 },
+                    new DateTime?[] { null, null, null, xDate, xDate },
+                new float?[] { null, null, 5.56f, 4.56f, 3.56f });
         }
         ///<exclude/>
         [Test]
@@ -822,12 +806,59 @@ namespace Azavea.Open.DAO.Tests
             Assert.AreEqual(new DateTime(2001, 1, 1), (objs[4])["DateVal"], "fifth date was wrong.");
             Assert.AreEqual(null, (objs[0])["FloatVal"], "first float was wrong.");
             Assert.AreEqual(null, (objs[1])["FloatVal"], "second float was wrong.");
-            Assert.AreEqual(null, (objs[2])["FloatVal"], "third float was wrong.");
-            Assert.AreEqual(null, (objs[3])["FloatVal"], "fourth float was wrong.");
             // Since this is a dictionary and doesn't lend typing to the variable, it may
             // come back as a double from the database, resulting in minor precision shifts.
-            Assert.Greater(Convert.ToDouble((objs[4])["FloatVal"]), 4.55999, "fifth float was wrong.");
-            Assert.Less(Convert.ToDouble((objs[4])["FloatVal"]), 4.56001, "fifth float was wrong.");
+            Assert.Greater(Convert.ToDouble((objs[2])["FloatVal"]), 5.55999, "third float was wrong.");
+            Assert.Less(Convert.ToDouble((objs[2])["FloatVal"]), 5.56001, "third float was wrong.");
+            Assert.Greater(Convert.ToDouble((objs[3])["FloatVal"]), 4.55999, "fourth float was wrong.");
+            Assert.Less(Convert.ToDouble((objs[3])["FloatVal"]), 4.56001, "fourth float was wrong.");
+            Assert.Greater(Convert.ToDouble((objs[4])["FloatVal"]), 3.55999, "fifth float was wrong.");
+            Assert.Less(Convert.ToDouble((objs[4])["FloatVal"]), 3.56001, "fifth float was wrong.");
+        }
+        ///<exclude/>
+        [Test]
+        public void TestSortOnNull()
+        {
+            PrepNullableTable();
+            DaoCriteria crit = new DaoCriteria();
+            crit.Orders.Add(new SortOrder("FloatVal", SortType.Asc));
+            crit.Orders.Add(new SortOrder("BoolVal", SortType.Asc));
+            IList<NullableClass> objs = _nullDAO.Get(crit);
+            DateTime xDate = new DateTime(2001, 1, 1);
+            if (_expectNullsFirst)
+            {
+                AssertNullableResults(objs,
+                    new bool?[]     { null, true, true,  true,  true },
+                    new int?[]      { null, null, 123,   123,   123 },
+                    new DateTime?[] { null, null, xDate, xDate, null },
+                    new float?[]    { null, null, 3.56f, 4.56f, 5.56f });
+            }
+            else
+            {
+                AssertNullableResults(objs,
+                    new bool?[]     { true, true, true, true, null },
+                    new int?[]      { 123, 123, 123, null, null },
+                    new DateTime?[] { xDate, xDate, null, null, null },
+                    new float?[]    { 3.56f, 4.56f, 5.56f, null, null });
+            }
+        }
+
+        private static void AssertNullableResults(IList<NullableClass> actuals,
+            bool?[] expectedBools, int?[] expectedInts,
+            DateTime?[] expectedDates, float?[] expectedFloats)
+        {
+            Assert.AreEqual(expectedBools.Length, expectedInts.Length, "Test error, int array doesn't match up.");
+            Assert.AreEqual(expectedBools.Length, expectedDates.Length, "Test error, date array doesn't match up.");
+            Assert.AreEqual(expectedBools.Length, expectedFloats.Length, "Test error, float array doesn't match up.");
+            Assert.IsNotNull(actuals, "Got null list.");
+            Assert.AreEqual(expectedBools.Length, actuals.Count, "Wrong number of records.");
+            for (int index = 0; index < expectedBools.Length; index++)
+            {
+                Assert.AreEqual(expectedBools[index], actuals[index].BoolVal, "Bool " + index + " was wrong.");
+                Assert.AreEqual(expectedInts[index], actuals[index].IntVal, "Int " + index + " was wrong.");
+                Assert.AreEqual(expectedDates[index], actuals[index].DateVal, "Date " + index + " was wrong.");
+                Assert.AreEqual(expectedFloats[index], actuals[index].FloatVal, "Float " + index + " was wrong.");
+            }
         }
 
         ///<exclude/>
@@ -1092,13 +1123,15 @@ namespace Azavea.Open.DAO.Tests
             _nullDAO.Insert(testMe);
             testMe.ID = 102;
             testMe.IntVal = 123;
+            testMe.FloatVal = (float)5.56;
             _nullDAO.Insert(testMe);
             testMe.ID = 103;
+            testMe.FloatVal = (float)4.56;
             DateTime testDate = new DateTime(2001, 1, 1);
             testMe.DateVal = testDate;
             _nullDAO.Insert(testMe);
             testMe.ID = 104;
-            testMe.FloatVal = (float)4.56;
+            testMe.FloatVal = (float)3.56;
             _nullDAO.Insert(testMe);
         }
 
@@ -1112,14 +1145,16 @@ namespace Azavea.Open.DAO.Tests
             testMe["BoolVal"] = true;
             _nullDictDAO.Insert(testMe);
             testMe["ID"] = 112;
+            testMe["FloatVal"] = (float)5.56;
             testMe["IntVal"] = 123;
             _nullDictDAO.Insert(testMe);
             testMe["ID"] = 113;
+            testMe["FloatVal"] = (float)4.56;
             DateTime testDate = new DateTime(2001, 1, 1);
             testMe["DateVal"] = testDate;
             _nullDictDAO.Insert(testMe);
             testMe["ID"] = 114;
-            testMe["FloatVal"] = (float)4.56;
+            testMe["FloatVal"] = (float)3.56;
             _nullDictDAO.Insert(testMe);
         }
     }
