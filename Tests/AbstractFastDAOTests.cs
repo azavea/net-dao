@@ -116,6 +116,7 @@ namespace Azavea.Open.DAO.Tests
         [TestFixtureSetUp]
         public void ResetAllTables()
         {
+            ResetStoreHouse(_nameDAO.DataAccessLayer);
             ResetTable(_nameDAO.DataAccessLayer, _nameDAO.ClassMap);
             ResetTable(_enumDAO.DataAccessLayer, _enumDAO.ClassMap);
             ResetTable(_boolDAO.DataAccessLayer, _boolDAO.ClassMap);
@@ -133,6 +134,27 @@ namespace Azavea.Open.DAO.Tests
             _nameDAO.Insert(temp1);
             temp1.Name = "Megan";
             _nameDAO.Insert(temp1);
+        }
+
+        /// <summary>
+        /// Utility method for deleting and recreating unit test databases, if possible.
+        /// </summary>
+        /// <param name="layer">The low-level data access layer object from a FastDAO.</param>
+        private static void ResetStoreHouse(IDaLayer layer)
+        {
+            if (layer is IDaDdlLayer)
+            {
+                IDaDdlLayer ddlLayer = (IDaDdlLayer)layer;
+                try
+                {
+                    ddlLayer.DeleteStoreHouse();
+                    ddlLayer.CreateStoreHouse();
+                }
+                catch (NotImplementedException)
+                {
+                    // Ignore it if not implemented.
+                }
+            }
         }
 
         /// <summary>
