@@ -1126,6 +1126,23 @@ namespace Azavea.Open.DAO.Tests
             }
         }
 
+        /// <exclude/>
+        [Test]
+        public void TestEnumInAndNotInList()
+        {
+            _enumDAO.Truncate();
+            EnumClass test = new EnumClass();
+            test.Enum1 = EnumTest.HERE;
+            test.Enum2 = EnumTest.IS;
+            _enumDAO.Insert(test);
+            DaoCriteria crit = new DaoCriteria(new PropertyInListExpression("Enum1",
+                new EnumTest[] { EnumTest.HERE }));
+            Assert.AreEqual(1, _enumDAO.GetCount(crit), "Should be 1 row matching IN LIST.");
+            crit = new DaoCriteria(new PropertyInListExpression("Enum1",
+                new EnumTest[] { EnumTest.HERE }, false));
+            Assert.AreEqual(0, _enumDAO.GetCount(crit), "Should be no rows matching NOT IN LIST.");
+        }
+
         private static void DumpGroupResults(IEnumerable<GroupCountResult> results)
         {
             foreach (GroupCountResult result in results)
