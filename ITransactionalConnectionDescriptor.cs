@@ -27,9 +27,9 @@ namespace Azavea.Open.DAO
     /// If the data source supports transactions (multiple operations as an atomic unit)
     /// (such as most databases) the connection descriptor will implement this interface.
     /// 
-    /// Usage: First call BeginTransaction, then pass the new ConnectionDescriptor
-    ///        it gives you to every subsequent call (if you call a method but
-    ///        do not pass the new ConnectionDescriptor, the method will not happen as part
+    /// Usage: First call BeginTransaction, then pass the ITransaction
+    ///        it gives you to every subsequent FastDAO call (if you call a method but
+    ///        do not pass the ITransaction, the method will not happen as part
     ///        of this transaction).  When complete, call Commit (or Rollback if
     ///        something went wrong).
     /// 

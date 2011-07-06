@@ -72,6 +72,10 @@ namespace Azavea.Open.DAO.Tests
         protected readonly Boolean _supportsGroupBy = true;
         /// <exclude/>
         protected readonly Boolean _expectNullsFirst = true;
+        /// <exclude/>
+        protected readonly Boolean _supportsTransactions = true;
+        /// <exclude/>
+        protected readonly Boolean _transactionsLockData;
 
         /// <exclude/>
         protected AbstractFastDAOTests(Config cfg, string configSection, bool hasNativeBoolean)
@@ -100,11 +104,21 @@ namespace Azavea.Open.DAO.Tests
         /// <exclude/>
         protected AbstractFastDAOTests(Config cfg, string configSection, bool hasNativeBoolean,
                                        bool canGetAutoIDs, bool canVerifyWithSQL, bool supportsGroupBy,
-                                       bool expectNullsFirst)
+                                       bool expectNullsFirst, bool supportsTransactions)
+            : this(cfg, configSection, hasNativeBoolean, canGetAutoIDs, canVerifyWithSQL,
+                   supportsGroupBy, expectNullsFirst, supportsTransactions, false) { }
+
+        /// <exclude/>
+        protected AbstractFastDAOTests(Config cfg, string configSection, bool hasNativeBoolean,
+                                       bool canGetAutoIDs, bool canVerifyWithSQL, bool supportsGroupBy,
+                                       bool expectNullsFirst, bool supportsTransactions,
+                                       bool transactionsLockData)
             : this(cfg, configSection, hasNativeBoolean, canGetAutoIDs, canVerifyWithSQL)
         {
             _supportsGroupBy = supportsGroupBy;
             _expectNullsFirst = expectNullsFirst;
+            _supportsTransactions = supportsTransactions;
+            _transactionsLockData = transactionsLockData;
         }
 
         /// <summary>
@@ -121,19 +135,12 @@ namespace Azavea.Open.DAO.Tests
             ResetTable(_enumDAO.DataAccessLayer, _enumDAO.ClassMap);
             ResetTable(_boolDAO.DataAccessLayer, _boolDAO.ClassMap);
             ResetTable(_nullDAO.DataAccessLayer, _nullDAO.ClassMap);
-            NameClass temp1 = new NameClass();
-            temp1.Name = "Michael";
-            _nameDAO.Insert(temp1);
-            temp1.Name = "Rich";
-            _nameDAO.Insert(temp1);
-            temp1.Name = "Keith";
-            _nameDAO.Insert(temp1);
-            temp1.Name = "Rachel";
-            _nameDAO.Insert(temp1);
-            temp1.Name = "Jeff";
-            _nameDAO.Insert(temp1);
-            temp1.Name = "Megan";
-            _nameDAO.Insert(temp1);
+            InsertName(_nameDAO, "Michael", 1);
+            InsertName(_nameDAO, "Rich", 2);
+            InsertName(_nameDAO, "Keith", 3);
+            InsertName(_nameDAO, "Rachel", 4);
+            InsertName(_nameDAO, "Jeff", 5);
+            InsertName(_nameDAO, "Megan", 6);
         }
 
         /// <summary>
@@ -244,16 +251,9 @@ namespace Azavea.Open.DAO.Tests
         {
             string nameToInsert = "Aaron";
 
-            NameClass someName = new NameClass();
-            someName.Name = nameToInsert;
+            InsertName(_nameDAO, nameToInsert, 0);
 
-            _nameDAO.Insert(someName);
-
-            IList<NameClass> results = _nameDAO.Get("Name", nameToInsert);
-
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on new record.");
-
-            Assert.AreEqual(nameToInsert, (results[0]).Name, "Returned name does not match expected value.");
+            AssertOneName(_nameDAO, nameToInsert, "Checking inserted name");
         }
 
         /// <exclude/>
@@ -262,16 +262,9 @@ namespace Azavea.Open.DAO.Tests
         {
             string nameToInsert = "AaronD";
 
-            CheckedDictionary<string, object> someName = new CheckedDictionary<string, object>();
-            someName["Name"] = nameToInsert;
+            InsertName(_nameDictDAO, nameToInsert, 0);
 
-            _nameDictDAO.Insert(someName);
-
-            IList<CheckedDictionary<string, object>> results = _nameDictDAO.Get("Name", nameToInsert);
-
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on new record.");
-
-            Assert.AreEqual(nameToInsert, (results[0])["Name"], "Returned name does not match expected value.");
+            AssertOneName(_nameDictDAO, nameToInsert, "Checking inserted name");
         }
 
         /// <exclude/>
@@ -288,12 +281,8 @@ namespace Azavea.Open.DAO.Tests
 
             _nameDAO.Insert(new NameClass[] {someName1, someName2});
 
-            IList<NameClass> results = _nameDAO.Get("Name", name1);
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on name1.");
-            Assert.AreEqual(name1, (results[0]).Name, "Returned name1 does not match expected value.");
-            results = _nameDAO.Get("Name", name2);
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on name2.");
-            Assert.AreEqual(name2, (results[0]).Name, "Returned name2 does not match expected value.");
+            AssertOneName(_nameDAO, name1, "Checking inserted name1");
+            AssertOneName(_nameDAO, name2, "Checking inserted name2");
         }
 
         /// <exclude/>
@@ -310,56 +299,37 @@ namespace Azavea.Open.DAO.Tests
 
             _nameDictDAO.Insert(new CheckedDictionary<string, object>[] { someName1, someName2 });
 
-            IList<CheckedDictionary<string, object>> results = _nameDictDAO.Get("Name", name1);
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on name1.");
-            Assert.AreEqual(name1, (results[0])["Name"], "Returned name1 does not match expected value.");
-            results = _nameDictDAO.Get("Name", name2);
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on name2.");
-            Assert.AreEqual(name2, (results[0])["Name"], "Returned name2 does not match expected value.");
+            AssertOneName(_nameDictDAO, name1, "Checking inserted name1");
+            AssertOneName(_nameDictDAO, name2, "Checking inserted name2");
+        }
+
+        private void TestInsertFindingGenerateIdHelper<T>(FastDAO<T> dao, string nameToInsert) where T : class, new()
+        {
+            if (!_canGetAutoGeneratedID)
+            {
+                Assert.Ignore("Autogenerated IDs cannot be retrieved for this data source.");
+            }
+            // Initialize with an ID that could not be the auto-generated ID.
+            T someName = InsertName(dao, nameToInsert, -1, true);
+
+            // It should have ID that is in the database.
+            T someNameRetrieved = dao.GetFirst("Name", nameToInsert);
+            Assert.AreEqual(GetNameId(someNameRetrieved), GetNameId(someName),
+                "Original object didn't get autogenerated ID set on it.");
         }
 
         /// <exclude/>
         [Test]
         public void TestInsertFindingGeneratedId()
         {
-            if (!_canGetAutoGeneratedID)
-            {
-                Assert.Ignore("Autogenerated IDs cannot be retrieved for this data source.");
-            }
-            const string nameToInsert = "Leahcim";
-            NameClass someName = new NameClass();
-            
-            // First set an ID that could not be the auto-generated ID.
-            someName.ID = -1;
-            someName.Name = nameToInsert;
-            
-            _nameDAO.Insert(someName, true);
-
-            // It should have ID that is in the database.
-            NameClass someNameRetrieved = _nameDAO.GetFirst("Name", nameToInsert);
-            Assert.AreEqual(someNameRetrieved.ID, someName.ID);
+            TestInsertFindingGenerateIdHelper(_nameDAO, "Leahcim");
         }
 
         /// <exclude/>
         [Test]
         public void TestInsertFindingGeneratedIdDictionary()
         {
-            if (!_canGetAutoGeneratedID)
-            {
-                Assert.Ignore("Autogenerated IDs cannot be retrieved for this data source.");
-            }
-            const string nameToInsert = "LeahcimD";
-            CheckedDictionary<string, object> someName = new CheckedDictionary<string, object>();
-
-            // First set an ID that could not be the auto-generated ID.
-            someName["ID"] = -1;
-            someName["Name"] = nameToInsert;
-
-            _nameDictDAO.Insert(someName, true);
-
-            // It should have ID that is in the database.
-            CheckedDictionary<string, object> someNameRetrieved = _nameDictDAO.GetFirst("Name", nameToInsert);
-            Assert.AreEqual(someNameRetrieved["ID"], someName["ID"]);
+            TestInsertFindingGenerateIdHelper(_nameDictDAO, "LeahcimD");
         }
 
         /// <exclude/>
@@ -369,14 +339,8 @@ namespace Azavea.Open.DAO.Tests
             string nameToInsert = "Josh";
             string nameToInsert2 = "Reed";
 
-            NameClass someName = new NameClass();
-            someName.Name = nameToInsert;
-
-            NameClass someName2 = new NameClass();
-            someName2.Name = nameToInsert2;
-
-            _nameDAO.Insert(someName);
-            _nameDAO.Insert(someName2);
+            InsertName(_nameDAO, nameToInsert, 0);
+            InsertName(_nameDAO, nameToInsert2, 0);
 
             DaoCriteria crit = new DaoCriteria();
             IList<object> names = new List<object>();
@@ -399,14 +363,8 @@ namespace Azavea.Open.DAO.Tests
             string nameToInsert = "JoshD";
             string nameToInsert2 = "ReedD";
 
-            CheckedDictionary<string, object> someName1 = new CheckedDictionary<string, object>();
-            someName1["Name"] = nameToInsert;
-
-            CheckedDictionary<string, object> someName2 = new CheckedDictionary<string, object>();
-            someName2["Name"] = nameToInsert2;
-
-            _nameDictDAO.Insert(someName1);
-            _nameDictDAO.Insert(someName2);
+            InsertName(_nameDictDAO, nameToInsert, 0);
+            InsertName(_nameDictDAO, nameToInsert2, 0);
             
             DaoCriteria crit = new DaoCriteria();
             IList<object> names = new List<object>();
@@ -429,26 +387,14 @@ namespace Azavea.Open.DAO.Tests
             string nameToInsert = "Carissa";
             string changed = "CarissaCHANGED";
 
-            NameClass someName = new NameClass();
-            someName.ID = 400;
-            someName.Name = nameToInsert;
+            InsertName(_nameDAO, nameToInsert, 400);
 
-            _nameDAO.Insert(someName);
-
-            IList<NameClass> results = _nameDAO.Get("Name", nameToInsert);
-
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on new record.");
-
-            NameClass fromDBName = results[0];
+            NameClass fromDBName = AssertOneName(_nameDAO, nameToInsert, "Inserting before updating");
             fromDBName.Name = changed;
 
             _nameDAO.Update(fromDBName);
 
-            IList<NameClass> results2 = _nameDAO.Get("ID", fromDBName.ID);
-
-            Assert.AreEqual(1, results2.Count, "Expected 1 and only 1 result for query on new record.");
-
-            Assert.AreEqual(changed, (results2[0]).Name, "Returned name does not match expected value.");
+            AssertOneName(_nameDAO, changed, GetNameId(fromDBName), "Checking updated name");
         }
 
         /// <exclude/>
@@ -458,26 +404,14 @@ namespace Azavea.Open.DAO.Tests
             string nameToInsert = "CarissaD";
             string changed = "CarissaCHANGEDD";
 
-            CheckedDictionary<string, object> someName = new CheckedDictionary<string, object>();
-            someName["ID"] = 410;
-            someName["Name"] = nameToInsert;
+            InsertName(_nameDictDAO, nameToInsert, 410);
 
-            _nameDictDAO.Insert(someName);
-
-            IList<CheckedDictionary<string, object>> results = _nameDictDAO.Get("Name", nameToInsert);
-
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on new record.");
-
-            CheckedDictionary<string, object> fromDBName = results[0];
+            CheckedDictionary<string, object> fromDBName = AssertOneName(_nameDictDAO, nameToInsert, "Inserting before updating");
             fromDBName["Name"] = changed;
 
             _nameDictDAO.Update(fromDBName);
 
-            IList<CheckedDictionary<string, object>> results2 = _nameDictDAO.Get("ID", fromDBName["ID"]);
-
-            Assert.AreEqual(1, results2.Count, "Expected 1 and only 1 result for query on new record.");
-
-            Assert.AreEqual(changed, (results2[0])["Name"], "Returned name does not match expected value.");
+            AssertOneName(_nameDictDAO, changed, GetNameId(fromDBName), "Checking updated name");
         }
 
         /// <exclude/>
@@ -498,24 +432,16 @@ namespace Azavea.Open.DAO.Tests
 
             _nameDAO.Insert(new NameClass[] { someName1, someName2 });
 
-            IList<NameClass> results = _nameDAO.Get("Name", name1);
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on name1.");
-            NameClass fromDBName1 = results[0];
+            NameClass fromDBName1 = AssertOneName(_nameDAO, name1, "Inserting name1 before updating");
             fromDBName1.Name = changed1;
 
-            results = _nameDAO.Get("Name", name2);
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on name2.");
-            NameClass fromDBName2 = results[0];
+            NameClass fromDBName2 = AssertOneName(_nameDAO, name2, "Inserting name2 before updating");
             fromDBName2.Name = changed2;
 
             _nameDAO.Update(new NameClass[] { fromDBName1, fromDBName2 });
 
-            IList<NameClass> updateResults1 = _nameDAO.Get("ID", fromDBName1.ID);
-            Assert.AreEqual(1, updateResults1.Count, "Expected 1 and only 1 result for query on updated name1.");
-            Assert.AreEqual(changed1, (updateResults1[0]).Name, "Returned name1 does not match expected value.");
-            IList<NameClass> updateResults2 = _nameDAO.Get("ID", fromDBName2.ID);
-            Assert.AreEqual(1, updateResults2.Count, "Expected 1 and only 1 result for query on updated name2.");
-            Assert.AreEqual(changed2, (updateResults2[0]).Name, "Returned name2 does not match expected value.");
+            AssertOneName(_nameDAO, changed1, fromDBName1.ID, "Checking name1 after updating");
+            AssertOneName(_nameDAO, changed2, fromDBName2.ID, "Checking name1 after updating");
         }
 
         /// <exclude/>
@@ -536,73 +462,100 @@ namespace Azavea.Open.DAO.Tests
 
             _nameDictDAO.Insert(new CheckedDictionary<string, object>[] { someName1, someName2 });
 
-            IList<CheckedDictionary<string, object>> results = _nameDictDAO.Get("Name", name1);
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on name1.");
-            CheckedDictionary<string, object> fromDBName1 = results[0];
+            CheckedDictionary<string, object> fromDBName1 = AssertOneName(_nameDictDAO, name1, "Inserting name1 before updating");
             fromDBName1["Name"] = changed1;
 
-            results = _nameDictDAO.Get("Name", name2);
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on name2.");
-            CheckedDictionary<string, object> fromDBName2 = results[0];
+            CheckedDictionary<string, object> fromDBName2 = AssertOneName(_nameDictDAO, name2, "Inserting name2 before updating");
             fromDBName2["Name"] = changed2;
 
             _nameDictDAO.Update(new CheckedDictionary<string, object>[] { fromDBName1, fromDBName2 });
 
-            IList<CheckedDictionary<string, object>> updateResults1 = _nameDictDAO.Get("ID", fromDBName1["ID"]);
-            Assert.AreEqual(1, updateResults1.Count, "Expected 1 and only 1 result for query on updated name1.");
-            Assert.AreEqual(changed1, (updateResults1[0])["Name"], "Returned name1 does not match expected value.");
-            IList<CheckedDictionary<string, object>> updateResults2 = _nameDictDAO.Get("ID", fromDBName2["ID"]);
-            Assert.AreEqual(1, updateResults2.Count, "Expected 1 and only 1 result for query on updated name2.");
-            Assert.AreEqual(changed2, (updateResults2[0])["Name"], "Returned name2 does not match expected value.");
+            AssertOneName(_nameDictDAO, changed1, fromDBName1["ID"], "Checking name1 after updating");
+            AssertOneName(_nameDictDAO, changed2, fromDBName2["ID"], "Checking name2 after updating");
         }
 
+        private static void TestSimpleDeleteHelper<T>(FastDAO<T> dao) where T : class, new()
+        {
+            string nameToInsert = "Andrew";
+
+            InsertName(dao, nameToInsert, 500);
+
+            T fromDbName = AssertOneName(dao, nameToInsert, "Inserting before deleting");
+
+            dao.Delete(fromDbName);
+
+            AssertNoName(dao, GetNameId(fromDbName), "After delete");
+        }
         /// <exclude/>
         [Test]
         public void TestSimpleDelete()
         {
-            string nameToInsert = "Andrew";
-
-            NameClass someName = new NameClass();
-            someName.ID = 500;
-            someName.Name = nameToInsert;
-
-            _nameDAO.Insert(someName);
-
-            IList<NameClass> results = _nameDAO.Get("Name", nameToInsert);
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on new record.");
-
-            NameClass fromDbName = results[0];
-
-            _nameDAO.Delete(fromDbName);
-
-            results = _nameDAO.Get("ID", fromDbName.ID);
-
-            Assert.AreEqual(0, results.Count, "Query after delete expected 0 results.");
+            TestSimpleDeleteHelper(_nameDAO);
         }
 
         /// <exclude/>
         [Test]
         public void TestSimpleDeleteDictionary()
         {
-            string nameToInsert = "AndrewD";
+            TestSimpleDeleteHelper(_nameDictDAO);
+        }
 
-            CheckedDictionary<string, object> someName = new CheckedDictionary<string, object>();
-            someName["ID"] = 500;
-            someName["Name"] = nameToInsert;
+        private void TestTransactionalInsertDeleteHelper<T>(FastDAO<T> dao, string name) where T : class, new()
+        {
+            if (!_supportsTransactions)
+            {
+                Assert.Ignore("This data source does not support transactions.");
+            }
+            if (!(dao.ConnDesc is ITransactionalConnectionDescriptor))
+            {
+                Assert.Fail("Attempting to test transactions, but the connection descriptor doesn't think it supports them.");
+            }
+            // Start by making sure our record doesn't exist.
+            AssertNoName(dao, name, "Verifing record doesn't exist before inserting");
+            // Start a transaction.
+            ITransaction tx = ((ITransactionalConnectionDescriptor)dao.ConnDesc).BeginTransaction();
+            // Now insert them on the transaction.
+            InsertName(dao, tx, name, 0);
+            // Verify the transaction connection CAN see them.
+            AssertOneName(dao, tx, name, "Record inserted on transaction");
+            if (!_transactionsLockData)
+            {
+                // Verify a non-transaction connection cannot see them yet, since they aren't committed.
+                AssertNoName(dao, name, "Record hasn't been committed");
+            }
+            // Commit the transaction.
+            tx.Commit();
+            // Verify a non-transaction connection can now see the records.
+            AssertOneName(dao, name, "Record has been committed");
+            // Start a new transaction.
+            tx = ((ITransactionalConnectionDescriptor)dao.ConnDesc).BeginTransaction();
+            // Delete the record on the transaction.
+            DaoCriteria crit = new DaoCriteria(new EqualExpression("Name", name));
+            dao.Delete(tx, crit);
+            // Verify the transaction connection cannot see it.
+            AssertNoName(dao, tx, name, "Record has been deleted");
+            if (!_transactionsLockData)
+            {
+                // Verify a non-transaction connection can still see it.
+                AssertOneName(dao, name, "Deletion is not committed");
+            }
+            // Roll back the transaction.
+            tx.Rollback();
+            // Verify the rolled-back deleted record still exists.
+            AssertOneName(dao, name, "Rolled back deletion");
+        }
+        /// <exclude/>
+        [Test]
+        public void TestTransactionalInsertDelete()
+        {
+            TestTransactionalInsertDeleteHelper(_nameDAO, "Trans");
+        }
 
-            _nameDictDAO.Insert(someName);
-
-            IList<CheckedDictionary<string, object>> results = _nameDictDAO.Get("Name", nameToInsert);
-            Assert.AreEqual(1, results.Count, "Expected 1 and only 1 result for query on new record.");
-
-            CheckedDictionary<string, object> fromDbName = results[0];
-            Assert.IsTrue(fromDbName.ContainsKey("ID"), "ID value is missing from read result.");
-
-            _nameDictDAO.Delete(fromDbName);
-
-            results = _nameDictDAO.Get("ID", fromDbName["ID"]);
-
-            Assert.AreEqual(0, results.Count, "Query after delete expected 0 results.");
+        /// <exclude/>
+        [Test]
+        public void TestTransactionalInsertDeleteDictionary()
+        {
+            TestTransactionalInsertDeleteHelper(_nameDictDAO, "TransD");
         }
 
         /// <exclude />
@@ -1196,6 +1149,106 @@ namespace Azavea.Open.DAO.Tests
             testMe["FloatVal"] = (float)3.56;
             _nullDictDAO.Insert(testMe);
         }
+
+        #region Name helper methods
+        // These methods are intended to stop having to cut-n-paste
+        // every unit test to test both the class-based and dictionary-based DAOs.
+        // The refactor is not yet complete, but the delete test is done.
+
+        // ReSharper disable UnusedParameter.Local
+        // The DAO is passed because it is the simplest way to get type info, not because we
+        // actually need it.
+        private static T MakeName<T>(FastDAO<T> dao, string name, int id) where T : class, new()
+        // ReSharper restore UnusedParameter.Local
+        {
+            T retVal;
+            if (typeof(T) == typeof(NameClass))
+            {
+                NameClass someName = new NameClass();
+                someName.ID = id;
+                someName.Name = name;
+                retVal = (T)(object)someName;
+            }
+            else
+            {
+                CheckedDictionary<string, object> someName = new CheckedDictionary<string, object>();
+                someName["ID"] = id;
+                someName["Name"] = name;
+                retVal = (T)(object)someName;
+            }
+            return retVal;
+        }
+        private static T InsertName<T>(FastDAO<T> dao, string name, int id) where T : class, new()
+        {
+            return InsertName(dao, null, name, id, false);
+        }
+        private static T InsertName<T>(FastDAO<T> dao, ITransaction tx, string name, int id) where T : class, new()
+        {
+            return InsertName(dao, tx, name, id, false);
+        }
+        private static T InsertName<T>(FastDAO<T> dao, string name, int id, bool setGeneratedId) where T : class, new()
+        {
+            return InsertName(dao, null, name, id, setGeneratedId);
+        }
+        private static T InsertName<T>(FastDAO<T> dao, ITransaction tx, string name, int id, bool setGeneratedId) where T : class, new()
+        {
+            T retVal = MakeName(dao, name, id);
+            dao.Insert(tx, retVal, setGeneratedId);
+            return retVal;
+        }
+        private static object GetNameId<T>(T name)
+        {
+            if (typeof(T) == typeof(NameClass))
+            {
+                return ((NameClass) (object) name).ID;
+            }
+            return ((CheckedDictionary<string, object>) (object) name)["ID"];
+        }
+        private static void AssertNoName<T>(IFastDaoReader<T> dao, string name, string desc) where T : class, new()
+        {
+            Assert.AreEqual(0, dao.Get("Name", name).Count, desc + " - expected 0 results for name = " + name + ".");
+        }
+        private static void AssertNoName<T>(IFastDaoReader<T> dao, ITransaction tx, string name, string desc) where T : class, new()
+        {
+            Assert.AreEqual(0, dao.Get(tx, "Name", name).Count, desc + " - expected 0 results for name = " + name + ".");
+        }
+        private static void AssertNoName<T>(IFastDaoReader<T> dao, object id, string desc) where T : class, new()
+        {
+            Assert.AreEqual(0, dao.Get("ID", id).Count, desc + " - expected 0 results for id = " + id + ".");
+        }
+        private static T AssertOneName<T>(IFastDaoReader<T> dao, string name, string desc) where T : class, new()
+        {
+            return AssertOneName(dao.Get("Name", name), name, desc + " - name = " + name);
+        }
+        private static T AssertOneName<T>(IFastDaoReader<T> dao, ITransaction tx, string name, string desc) where T : class, new()
+        {
+            return AssertOneName(dao.Get(tx, "Name", name), name, desc + " - name = " + name);
+        }
+        private static T AssertOneName<T>(IFastDaoReader<T> dao, string name, object id, string desc) where T : class, new()
+        {
+            return AssertOneName(dao.Get("ID", id), name, desc + " - id = " + id);
+        }
+        private static T AssertOneName<T>(IList<T> results, string name, string desc) where T : class, new()
+        {
+            Assert.AreEqual(1, results.Count, desc + " - expected 1 and only 1 result for query.");
+            T fromDbName = results[0];
+
+            if (typeof(T) == typeof(NameClass))
+            {
+                Assert.AreEqual(name, ((NameClass)(object)fromDbName).Name, "Returned name does not match expected value.");
+            }
+            else
+            {
+                CheckedDictionary<string, object> nameDict = ((CheckedDictionary<string, object>) (object) fromDbName);
+                Assert.IsTrue(nameDict.ContainsKey("ID"), "ID value is missing from read result.");
+                Assert.IsTrue(nameDict.ContainsKey("Name"), "Name value is missing from read result.");
+                Assert.AreEqual(name, nameDict["Name"], "Returned name does not match expected value.");
+            }
+
+            return fromDbName;
+        }
+
+        #endregion
     }
 
     /// <exclude/>

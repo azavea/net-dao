@@ -38,11 +38,26 @@ namespace Azavea.Open.DAO
         void Update(T obj);
 
         /// <summary>
-        /// Updates a bunch of records in one transaction, hopefully faster than
+        /// Updates this object's record in the data source.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="obj">The object to save.</param>
+        void Update(ITransaction transaction, T obj);
+
+        /// <summary>
+        /// Updates a bunch of records, hopefully faster than
         /// separate calls to Update().  Whether it is actually faster depends on
         /// the implementation.
         /// </summary>
         /// <param name="updateUs">List of objects to save.</param>
         void Update(IEnumerable<T> updateUs);
+        /// <summary>
+        /// Updates a bunch of records, hopefully faster than
+        /// separate calls to Update().  Whether it is actually faster depends on
+        /// the implementation.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="updateUs">List of objects to save.</param>
+        void Update(ITransaction transaction, IEnumerable<T> updateUs);
     }
 }

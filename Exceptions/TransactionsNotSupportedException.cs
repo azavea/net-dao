@@ -1,4 +1,4 @@
-// Copyright (c) 2004-2010 Azavea, Inc.
+// Copyright (c) 2004-2011 Azavea, Inc.
 // 
 // Permission is hereby granted, free of charge, to any person
 // obtaining a copy of this software and associated documentation
@@ -21,30 +21,23 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
-using Azavea.Open.Common;
-using NUnit.Framework;
-
-namespace Azavea.Open.DAO.Tests
+namespace Azavea.Open.DAO.Exceptions
 {
-    /// <exclude/>
-    [TestFixture]
-    public class MemoryDaoTests : AbstractFastDAOTests
+    /// <summary>
+    /// This exception is thrown when trying to use a transaction with a connection
+    /// that doesn't support them.
+    /// </summary>
+    public class TransactionsNotSupportedException : ExceptionWithConnectionInfo
     {
-        /// <exclude/>
-        public MemoryDaoTests()
-            : base(new Config("..\\..\\Tests\\MemoryDao.config", "MemoryDaoConfig"), "DAO",
-            true, true, false, false, false, false) { }
-
-        /// <exclude/>
-        [TestFixtureSetUp]
-        public virtual void Init()
+        /// <summary>
+        /// This connection doesn't support transactions.
+        /// </summary>
+        /// <param name="desc">Connection descriptor we were using to try to connect.</param>
+        /// <param name="message">A message describing what is wrong with the connection type.</param>
+        public TransactionsNotSupportedException(IConnectionDescriptor desc, string message)
+            : base(message, desc, null)
         {
-            _nameDAO.Insert(new NameClass("Michael"));
-            _nameDAO.Insert(new NameClass("Rich"));
-            _nameDAO.Insert(new NameClass("Keith"));
-            _nameDAO.Insert(new NameClass("Rachel"));
-            _nameDAO.Insert(new NameClass("Jeff"));
-            _nameDAO.Insert(new NameClass("Megan"));
+            // Nothing to set here.
         }
     }
 }

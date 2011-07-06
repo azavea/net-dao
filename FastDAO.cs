@@ -319,6 +319,15 @@ namespace Azavea.Open.DAO
         /// <param name="dataObject">An object to delete from the DB.</param>
         public virtual void Delete(T dataObject)
         {
+            Delete(null, dataObject);
+        }
+        /// <summary>
+        /// Deletes the specified object from the data source.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="dataObject">An object to delete from the DB.</param>
+        public virtual void Delete(ITransaction transaction, T dataObject)
+        {
             if (_classMap.IdDataColsByObjAttrs.Count <= 0)
             {
                 throw new BadDaoConfigurationException("You cannot delete an object of a type with no ID fields defined: " + typeof(T));
@@ -330,7 +339,7 @@ namespace Azavea.Open.DAO
             {
                 crit.Expressions.Add(new EqualExpression(propName, GetValueFromObject(dataObject, propName)));
             }
-            int numRecs = _dataAccessLayer.Delete(null, _classMap, crit);
+            int numRecs = _dataAccessLayer.Delete(transaction, _classMap, crit);
 
             if ((numRecs != 1) && (numRecs != UNKNOWN_NUM_ROWS))
             {
@@ -345,9 +354,18 @@ namespace Azavea.Open.DAO
         /// </summary>
         public virtual void Delete(IEnumerable<T> deleteUs)
         {
+            Delete(null, deleteUs);
+        }
+
+        /// <summary>
+        /// Deletes the specified objects from the data source.  If the objects are not in the
+        /// data source, it ignores them.
+        /// </summary>
+        public virtual void Delete(ITransaction transaction, IEnumerable<T> deleteUs)
+        {
             foreach (T obj in deleteUs)
             {
-                Delete(obj);
+                Delete(transaction, obj);
             }
         }
 
@@ -361,12 +379,26 @@ namespace Azavea.Open.DAO
         /// <returns>The number of rows/objects deleted (or UNKNOWN_NUM_ROWS).</returns>
         public virtual int Delete(DaoCriteria crit)
         {
+            return Delete(null, crit);
+        }
+
+        /// <summary>
+        /// Deletes objects from the data source that meet the given criteria.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="crit">Criteria for deletion.  NOTE: Only the expressions are observed,
+        ///                    other things (like "order" or start / limit) are ignored.
+        ///                    Also, null or blank (no expressions) criteria are NOT allowed.
+        ///                    If you really wish to delete everything, call DeleteAll().</param>
+        /// <returns>The number of rows/objects deleted (or UNKNOWN_NUM_ROWS).</returns>
+        public virtual int Delete(ITransaction transaction, DaoCriteria crit)
+        {
             if ((crit == null) || (crit.Expressions.Count == 0))
             {
                 throw new ArgumentNullException("crit",
                                                 "Critera must be non-null and must contain at least one expression.  To delete all records, use the DeleteAll method.");
             }
-            return _dataAccessLayer.Delete(null, _classMap, crit);
+            return _dataAccessLayer.Delete(transaction, _classMap, crit);
         }
 
         /// <summary>
@@ -375,7 +407,16 @@ namespace Azavea.Open.DAO
         /// <returns>The number of rows/objects deleted.</returns>
         public virtual int DeleteAll()
         {
-            return _dataAccessLayer.Delete(null, _classMap, null);
+            return DeleteAll(null);
+        }
+        /// <summary>
+        /// Deletes all records of this dao's type.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <returns>The number of rows/objects deleted.</returns>
+        public virtual int DeleteAll(ITransaction transaction)
+        {
+            return _dataAccessLayer.Delete(transaction, _classMap, null);
         }
 
         /// <summary>
@@ -445,7 +486,26 @@ namespace Azavea.Open.DAO
         ///                              value anyway.</param>
         public void Insert(T obj, bool setGeneratedId)
         {
-            SaveRecord(null, obj, false, true, setGeneratedId);
+            Insert(null, obj, setGeneratedId);
+        }
+        /// <summary>
+        /// Faster than Save if you know this is a new object that is being inserted.
+        /// Inserts the object into the data source.  If there are unique constraints on
+        /// the data source and this is a duplicate record, this may generate an error.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="obj">The object to save.</param>
+        /// <param name="setGeneratedId">Update the object with its new ID if the ID was 
+        ///                              autogenerated by the database.  That requires a 
+        ///                              second DB query to retrieve the ID and "most" of the 
+        ///                              time you may not need it.
+        ///                              If setGeneratedId is false, this ONLY Updates the 
+        ///                              object's ID field(s) IF the mapping contains a sequence, 
+        ///                              meaning that FastDAO must query the sequence for the next 
+        ///                              value anyway.</param>
+        public void Insert(ITransaction transaction, T obj, bool setGeneratedId)
+        {
+            SaveRecord(transaction, obj, false, true, setGeneratedId);
         }
 
         /// <summary>
@@ -454,15 +514,34 @@ namespace Azavea.Open.DAO
         /// <param name="obj">The object to save.</param>
         public virtual void Insert(T obj)
         {
-            Insert(obj, false);
+            Insert(null, obj, false);
+        }
+        /// <summary>
+        /// Simpler override, same as calling Insert(obj, false);
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="obj">The object to save.</param>
+        public virtual void Insert(ITransaction transaction, T obj)
+        {
+            Insert(transaction, obj, false);
         }
 
         /// <summary>
-        /// Inserts a bunch of records in one transaction, hopefully to be faster than
+        /// Inserts a bunch of records, hopefully to be faster than
         /// separate calls to Insert().  Whether it is or not depends on the implementation.
         /// </summary>
         /// <param name="insertUs">List of objects to save.</param>
         public virtual void Insert(IEnumerable<T> insertUs)
+        {
+            Insert(null, insertUs);
+        }
+        /// <summary>
+        /// Inserts a bunch of records, hopefully to be faster than
+        /// separate calls to Insert().  Whether it is or not depends on the implementation.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="insertUs">List of objects to save.</param>
+        public virtual void Insert(ITransaction transaction, IEnumerable<T> insertUs)
         {
             List<IDictionary<string, object>> propValueDictionaries = new List<IDictionary<string, object>>();
 
@@ -481,7 +560,7 @@ namespace Azavea.Open.DAO
 
             if (propValueDictionaries.Count > 0)
             {
-                _dataAccessLayer.InsertBatch(null, _classMap, propValueDictionaries);
+                _dataAccessLayer.InsertBatch(transaction, _classMap, propValueDictionaries);
             }
             else
             {
@@ -499,15 +578,36 @@ namespace Azavea.Open.DAO
         /// <param name="obj">The object to save.</param>
         public virtual void Update(T obj)
         {
-            SaveRecord(null, obj, true, false, false);
+            Update(null, obj);
+        }
+        /// <summary>
+        /// Faster than Save if you know this is an existing object that is being updated.
+        /// Updates the data source with the new values from this object.  May generate an
+        /// error if the object does not in fact exist in the data source yet.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="obj">The object to save.</param>
+        public virtual void Update(ITransaction transaction, T obj)
+        {
+            SaveRecord(transaction, obj, true, false, false);
         }
 
         /// <summary>
-        /// Updates a bunch of records in one transaction, hopefully to be faster than
+        /// Updates a bunch of records, hopefully to be faster than
         /// separate calls to Update().  Whether it is or not depends on the implementation.
         /// </summary>
         /// <param name="updateUs">List of objects to save.</param>
         public virtual void Update(IEnumerable<T> updateUs)
+        {
+            Update(null, updateUs);
+        }
+        /// <summary>
+        /// Updates a bunch of records, hopefully to be faster than
+        /// separate calls to Update().  Whether it is or not depends on the implementation.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="updateUs">List of objects to save.</param>
+        public virtual void Update(ITransaction transaction, IEnumerable<T> updateUs)
         {
             List<DaoCriteria> criteriaList = new List<DaoCriteria>();
             List<IDictionary<string, object>> propValueDictionaries = new List<IDictionary<string, object>>();
@@ -527,7 +627,7 @@ namespace Azavea.Open.DAO
 
             if (criteriaList.Count > 0)
             {
-                _dataAccessLayer.UpdateBatch(null, _classMap, criteriaList, propValueDictionaries);
+                _dataAccessLayer.UpdateBatch(transaction, _classMap, criteriaList, propValueDictionaries);
             }
             else
             {
@@ -543,7 +643,16 @@ namespace Azavea.Open.DAO
         /// <returns>A list of objects, or an empty list (not null).</returns>
         public IList<T> Get()
         {
-            return Get(null);
+            return Get((ITransaction)null);
+        }
+        /// <summary>
+        /// Returns all objects of the given type.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <returns>A list of objects, or an empty list (not null).</returns>
+        public IList<T> Get(ITransaction transaction)
+        {
+            return Get(transaction, null);
         }
 
         /// <summary>
@@ -554,11 +663,22 @@ namespace Azavea.Open.DAO
         /// <returns>The first object that matches the criteria.</returns>
         public T GetFirst(string propName, object val)
         {
+            return GetFirst(null, propName, val);
+        }
+        /// <summary>
+        /// Queries for objects of the specified type where the property matches the given value.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="propName">Property or Field on the object you want to match a value.</param>
+        /// <param name="val">Value that the Property or Field should have.</param>
+        /// <returns>The first object that matches the criteria.</returns>
+        public T GetFirst(ITransaction transaction, string propName, object val)
+        {
             DaoCriteria crit = DbCaches.Criteria.Get();
             try
             {
                 crit.Expressions.Add(new EqualExpression(propName, val, true));
-                return GetFirst(crit);
+                return GetFirst(transaction, crit);
             }
             finally
             {
@@ -598,6 +718,38 @@ namespace Azavea.Open.DAO
                 crit.Limit = oldLimit;
             }
         }
+        /// <summary>
+        /// Queries for one object that matches the given criteria.
+        /// </summary>
+        /// <returns>The first object that matches the criteria.</returns>
+        public T GetFirst(ITransaction transaction, DaoCriteria crit)
+        {
+            // To speed this up, we'll set the limit to one.
+            int oldLimit = crit.Limit;
+            try
+            {
+                crit.Limit = 1;
+                IList<T> list = Get(transaction, crit);
+
+                T retVal;
+
+                if (list == null || list.Count < 1)
+                {
+                    // This means null if it's an object.
+                    retVal = default(T);
+                }
+                else
+                {
+                    retVal = list[0];
+                }
+
+                return retVal;
+            }
+            finally
+            {
+                crit.Limit = oldLimit;
+            }
+        }
 
         /// <summary>
         /// Queries for objects where the property matches the given value.
@@ -607,11 +759,22 @@ namespace Azavea.Open.DAO
         /// <returns>All objects that match the criteria, or an empty list (not null).</returns>
         public IList<T> Get(string propertyName, object propertyValue)
         {
+            return Get(null, propertyName, propertyValue);
+        }
+        /// <summary>
+        /// Queries for objects where the property matches the given value.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="propertyName">Property or Field on the object you want to match a value.</param>
+        /// <param name="propertyValue">Value that the Property or Field should have.</param>
+        /// <returns>All objects that match the criteria, or an empty list (not null).</returns>
+        public IList<T> Get(ITransaction transaction, string propertyName, object propertyValue)
+        {
             DaoCriteria crit = DbCaches.Criteria.Get();
             try
             {
                 crit.Expressions.Add(new EqualExpression(propertyName, propertyValue, true));
-                return Get(crit);
+                return Get(transaction, crit);
             }
             finally
             {
@@ -648,13 +811,49 @@ namespace Azavea.Open.DAO
 
             return items;
         }
+        /// <summary>
+        /// Queries and returns objects matching the criteria.
+        /// </summary>
+        /// <returns>A list of objects, or an empty list (not null).</returns>
+        public virtual IList<T> Get(ITransaction transaction, DaoCriteria crit)
+        {
+            Hashtable parameters = DbCaches.Hashtables.Get();
+
+            if (crit != null)
+            {
+                if (crit.Start > 0)
+                {
+                    parameters.Add("start", crit.Start);
+                }
+                if (crit.Limit > 0)
+                {
+                    parameters.Add("limit", crit.Limit);
+                }
+            }
+            IDaQuery query = _dataAccessLayer.CreateQuery(_classMap, crit);
+            _dataAccessLayer.ExecuteQuery(transaction, _classMap, query, CreateObjectsFromReader, parameters);
+            _dataAccessLayer.DisposeOfQuery(query);
+
+            IList<T> items = (IList<T>)parameters["items"];
+
+            DbCaches.Hashtables.Return(parameters);
+
+            return items;
+        }
 
         /// <summary>
         /// Returns the number of objects matching the given criteria.
         /// </summary>
         public virtual int GetCount(DaoCriteria crit)
         {
-            return _dataAccessLayer.GetCount(null, _classMap, crit);
+            return GetCount(null, crit);
+        }
+        /// <summary>
+        /// Returns the number of objects matching the given criteria.
+        /// </summary>
+        public virtual int GetCount(ITransaction transaction, DaoCriteria crit)
+        {
+            return _dataAccessLayer.GetCount(transaction, _classMap, crit);
         }
 
         /// <summary>
@@ -667,7 +866,20 @@ namespace Azavea.Open.DAO
         /// <returns>The number of objects that match the criteria.</returns>
         public virtual List<GroupCountResult> GetCount(DaoCriteria crit, ICollection<AbstractGroupExpression> groupExpressions)
         {
-            return _dataAccessLayer.GetCount(null, _classMap, crit, groupExpressions);
+            return GetCount(null, crit, groupExpressions);
+        }
+        /// <summary>
+        /// Returns the number of objects of the specified type matching the given criteria,
+        /// aggregated by the given grouping expressions.  This matches "GROUP BY" behavior
+        /// in SQL.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="crit">The criteria that you wish the objects to match.  Start/limit and order are ignored.</param>
+        /// <param name="groupExpressions">The fields/expressions to aggregate on when counting.</param>
+        /// <returns>The number of objects that match the criteria.</returns>
+        public virtual List<GroupCountResult> GetCount(ITransaction transaction, DaoCriteria crit, ICollection<AbstractGroupExpression> groupExpressions)
+        {
+            return _dataAccessLayer.GetCount(transaction, _classMap, crit, groupExpressions);
         }
 
         /// <summary>
@@ -684,10 +896,27 @@ namespace Azavea.Open.DAO
         public int Iterate<P>(DaoCriteria criteria, DaoIterationDelegate<T, P> invokeMe,
                            P parameters, string desc)
         {
+            return Iterate(null, criteria, invokeMe, parameters, desc);
+        }
+        /// <summary>
+        /// Queries for objects, similar to Get, except that this iterates over the resulting
+        /// records and invokes the specified delegate for each one.  This allows processing of much
+        /// larger result sets since it doesn't attempt to load all the objects into memory at once.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="criteria">Any criteria for the query.  May be null for "all records".</param>
+        /// <param name="invokeMe">The method to invoke for each object returned by the query.</param>
+        /// <param name="parameters">Any parameters that you want to pass to the invokeMe method.
+        ///                            This may be null.</param>
+        /// <param name="desc">Description of the loop for logging purposes.</param>
+        /// <returns>The number of objects iterated over.</returns>
+        public int Iterate<P>(ITransaction transaction, DaoCriteria criteria, DaoIterationDelegate<T, P> invokeMe,
+                           P parameters, string desc)
+        {
             int limit = (criteria == null || criteria.Limit <= 0) ? int.MaxValue : criteria.Limit;
 
             IDaQuery query = _dataAccessLayer.CreateQuery(_classMap, criteria);
-            int retVal = IterateOverQuery(query, invokeMe, parameters, limit, desc);
+            int retVal = IterateOverQuery(transaction, query, invokeMe, parameters, limit, desc);
             _dataAccessLayer.DisposeOfQuery(query);
             return retVal;
         }
@@ -708,6 +937,23 @@ namespace Azavea.Open.DAO
         /// <typeparam name="R">The type of object returned by the other DAO.</typeparam>
         /// <returns>A list of KeyValuePairs.  The Key is the object from this </returns>
         public List<JoinResult<T,R>> Get<R>(DaoJoinCriteria crit, IFastDaoReader<R> rightDao) where R : class, new()
+        {
+            return Get(null, crit, rightDao);
+        }
+        /// <summary>
+        /// This allows joining between two DAOs.  Assuming both are using the same data
+        /// source, and joins are implemented in the data access layer, this will use
+        /// native joins (I.E. JOIN keyword in SQL) and be fast.  If not, this will use
+        /// the "PseudoJoiner", and be less fast (though not horrible most of the time,
+        /// depending on the number of records and the data sources involved).
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="crit">An object describing how to join the two DAOs.  Includes any
+        ///                    criteria that apply to the right or left DAO.</param>
+        /// <param name="rightDao">The other DAO we are joining against.</param>
+        /// <typeparam name="R">The type of object returned by the other DAO.</typeparam>
+        /// <returns>A list of KeyValuePairs.  The Key is the object from this </returns>
+        public List<JoinResult<T, R>> Get<R>(ITransaction transaction, DaoJoinCriteria crit, IFastDaoReader<R> rightDao) where R : class, new()
         {
             // If the two DAOs use the same connection descriptor, and the data
             // access layer supports joins, we can do an actual join via the
@@ -733,11 +979,11 @@ namespace Azavea.Open.DAO
                         _classMap, rightDao.ClassMap);
                 parameters["leftPrefix"] = query.GetLeftColumnPrefix();
                 parameters["rightPrefix"] = query.GetRightColumnPrefix();
-                _dataAccessLayer.ExecuteQuery(null, _classMap, query,
+                _dataAccessLayer.ExecuteQuery(transaction, _classMap, query,
                                               CreateJoinObjectsFromReader<R>, parameters);
                 _dataAccessLayer.DisposeOfQuery(query);
 
-                List<JoinResult<T,R>> items = (List<JoinResult<T,R>>)parameters["items"];
+                List<JoinResult<T, R>> items = (List<JoinResult<T, R>>)parameters["items"];
 
                 DbCaches.Hashtables.Return(parameters);
 
@@ -759,13 +1005,29 @@ namespace Azavea.Open.DAO
         /// <returns>The number of join results that matched the criteria.</returns>
         public int GetCount<R>(DaoJoinCriteria crit, IFastDaoReader<R> rightDao) where R : class, new()
         {
+            return GetCount(null, crit, rightDao);
+        }
+        /// <summary>
+        /// Performs a join using the given join criteria and returns the number of objects that
+        /// would result from the join if you called Get.
+        /// 
+        /// Whether this is faster than calling Get depends on the implementation.
+        /// </summary>
+        /// <typeparam name="R">The type of object returned by the other DAO.</typeparam>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="crit">An object describing how to join the two DAOs.  Includes any
+        ///                    criteria that apply to the right or left DAO.</param>
+        /// <param name="rightDao">The other DAO we are joining against.</param>
+        /// <returns>The number of join results that matched the criteria.</returns>
+        public int GetCount<R>(ITransaction transaction, DaoJoinCriteria crit, IFastDaoReader<R> rightDao) where R : class, new()
+        {
             // If the two DAOs use the same connection descriptor, and the data
             // access layer supports joins, we can do an actual join count via the
             // data source.  Otherwise, we'll fake it using the pseudojoiner.
             if ((_dataAccessLayer is IDaJoinableLayer) &&
                 ((IDaJoinableLayer)_dataAccessLayer).CanJoin<R>(crit, rightDao.ConnDesc, rightDao.ClassMap))
             {
-                return ((IDaJoinableLayer)_dataAccessLayer).GetCount(crit,
+                return ((IDaJoinableLayer)_dataAccessLayer).GetCount(transaction, crit,
                                                                      _classMap, rightDao.ClassMap);
             }
             // This is slow, but does work...
@@ -1389,6 +1651,7 @@ namespace Azavea.Open.DAO
         /// <summary>
         /// Helper that does the work once the query is created.
         /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
         /// <param name="query">The query to execute that is expected to return a large
         ///                      number of rows.</param>
         /// <param name="invokeMe">The method to invoke for each object returned by the query.</param>
@@ -1397,7 +1660,7 @@ namespace Azavea.Open.DAO
         /// <param name="max">maximum number of records to iterate over, int.MaxValue will mean no limit.</param>
         /// <param name="desc">Description of the loop for logging purposes.</param>
         /// <returns>the number of records iterated over.</returns>
-        private int IterateOverQuery<P>(IDaQuery query, DaoIterationDelegate<T, P> invokeMe,
+        private int IterateOverQuery<P>(ITransaction transaction, IDaQuery query, DaoIterationDelegate<T, P> invokeMe,
                                      P parameters, int max, string desc)
         {
             Hashtable myParameters = DbCaches.Hashtables.Get();
@@ -1406,7 +1669,7 @@ namespace Azavea.Open.DAO
             myParameters["max"] = max;
             myParameters["desc"] = desc;
 
-            _dataAccessLayer.ExecuteQuery(null, _classMap, query,
+            _dataAccessLayer.ExecuteQuery(transaction, _classMap, query,
                                           IterateOverObjectsFromReader<P>, myParameters);
 
             int retVal = (int)myParameters["count"];

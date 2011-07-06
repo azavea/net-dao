@@ -28,6 +28,11 @@ namespace Azavea.Open.DAO
     /// <summary>
     /// If the layer supports joins natively (such as SQL statements in the database)
     /// it will implement this interface.
+    /// 
+    /// NOTE on transactions: The methods on the interface accept transactions,
+    /// but if your data source does not support transactions (or you have not
+    /// yet implemented support), you may ignore that parameter as long as your
+    /// equivilent IConnectionDescriptor is not an ITransactionalConnectionDescriptor.
     /// </summary>
     public interface IDaJoinableLayer
     {
@@ -58,10 +63,11 @@ namespace Azavea.Open.DAO
         /// the normal query and seeing how many results you get back.  Generally it should be
         /// faster.
         /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
         /// <param name="crit">The criteria specifying the requested join.</param>
         /// <param name="leftMapping">Class mapping for the left table we're querying against.</param>
         /// <param name="rightMapping">Class mapping for the right table we're querying against.</param>
         /// <returns>The number of results that you would get if you ran the actual query.</returns>
-        int GetCount(DaoJoinCriteria crit, ClassMapping leftMapping, ClassMapping rightMapping);
+        int GetCount(ITransaction transaction, DaoJoinCriteria crit, ClassMapping leftMapping, ClassMapping rightMapping);
     }
 }

@@ -192,11 +192,12 @@ namespace Azavea.Open.DAO.SQL
         /// the normal query and seeing how many results you get back.  Generally it should be
         /// faster.
         /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
         /// <param name="crit">The criteria specifying the requested join.</param>
         /// <param name="leftMapping">Class mapping for the left table we're querying against.</param>
         /// <param name="rightMapping">Class mapping for the right table we're querying against.</param>
         /// <returns>The number of results that you would get if you ran the actual query.</returns>
-        public int GetCount(DaoJoinCriteria crit, ClassMapping leftMapping, ClassMapping rightMapping)
+        public int GetCount(ITransaction transaction, DaoJoinCriteria crit, ClassMapping leftMapping, ClassMapping rightMapping)
         {
             if (crit == null)
             {
@@ -215,7 +216,7 @@ namespace Azavea.Open.DAO.SQL
             TablesToQuery(query, crit, leftAlias, rightAlias, leftMapping, rightMapping);
             JoinExpressionsToQuery(query, crit, leftPrefix, rightPrefix, leftMapping, rightMapping);
 
-            int retVal = SqlConnectionUtilities.XSafeIntQuery(_connDesc, query.Sql.ToString(), query.Params);
+            int retVal = SqlConnectionUtilities.XSafeIntQuery(_connDesc, (SqlTransaction)transaction, query.Sql.ToString(), query.Params);
 
             DisposeOfQuery(query);
             return retVal;

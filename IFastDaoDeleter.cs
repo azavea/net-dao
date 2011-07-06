@@ -40,10 +40,24 @@ namespace Azavea.Open.DAO
         void Delete(T dataObject);
 
         /// <summary>
+        /// Deletes the specified object from the data source.  No error is generated
+        /// if the object does not appear to be stored in the data source.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="dataObject">An object to delete from the data source.</param>
+        void Delete(ITransaction transaction, T dataObject);
+
+        /// <summary>
         /// Deletes the specified objects from the data source.  If the objects are not in the
         /// database, no error is generated.
         /// </summary>
         void Delete(IEnumerable<T> deleteUs);
+
+        /// <summary>
+        /// Deletes the specified objects from the data source.  If the objects are not in the
+        /// database, no error is generated.
+        /// </summary>
+        void Delete(ITransaction transaction, IEnumerable<T> deleteUs);
 
         /// <summary>
         /// Deletes objects from the data source that meet the given criteria.
@@ -56,10 +70,28 @@ namespace Azavea.Open.DAO
         int Delete(DaoCriteria crit);
 
         /// <summary>
+        /// Deletes objects from the data source that meet the given criteria.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <param name="crit">Criteria for deletion.  NOTE: Only the expressions are observed,
+        ///                    other things (like "order" or start / limit) are ignored.
+        ///                    Also, null or blank (no expressions) criteria are NOT allowed.
+        ///                    If you really wish to delete all rows, call DeleteAll().</param>
+        /// <returns>The number of rows/objects deleted (or UNKNOWN_NUM_ROWS).</returns>
+        int Delete(ITransaction transaction, DaoCriteria crit);
+
+        /// <summary>
         /// Deletes all records of this dao's type.
         /// </summary>
         /// <returns>The number of rows/objects deleted.</returns>
         int DeleteAll();
+
+        /// <summary>
+        /// Deletes all records of this dao's type.
+        /// </summary>
+        /// <param name="transaction">The transaction to do this as part of. May be null.</param>
+        /// <returns>The number of rows/objects deleted.</returns>
+        int DeleteAll(ITransaction transaction);
 
         /// <summary>
         /// Deletes every row from the data source for this DAO.  
