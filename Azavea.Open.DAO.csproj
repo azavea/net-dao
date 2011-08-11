@@ -50,9 +50,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\ProductAssemblyInfo.cs">
-      <Link>ProductAssemblyInfo.cs</Link>
-    </Compile>
     <Compile Include="ClassMapping.cs" />
     <Compile Include="ConnectionDescriptor.cs" />
     <Compile Include="Criteria\Grouping\AbstractGroupExpression.cs" />
@@ -138,6 +135,7 @@
     <Compile Include="Memory\MemoryDaLayer.cs" />
     <Compile Include="Memory\MemoryDataReader.cs" />
     <Compile Include="Memory\MemoryObject.cs" />
+    <Compile Include="ProductAssemblyInfo.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQL\SqlDaDdlLayer.cs" />
     <Compile Include="SQL\DbCommandCache.cs" />
