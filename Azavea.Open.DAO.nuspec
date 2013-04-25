@@ -1,0 +1,23 @@
+﻿<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>$author$</authors>
+    <owners>$author$</owners>
+    <licenseUrl>http://opensource.org/licenses/MIT</licenseUrl>
+    <projectUrl>https://github.com/azavea/net-dao</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <releaseNotes></releaseNotes>
+    <copyright>Copyright Azavea 2013</copyright>
+    <tags>orm database hibernate model</tags>
+    <dependencies>
+      <dependency id="Azavea.Open.Common" version="2.1.1" />
+      <dependency id="GeoAPI" version="1.7.1" />
+      <dependency id="NUnit" version="2.5.9.10348" />
+      <dependency id="log4net" version="1.2.10" />
+    </dependencies>
+  </metadata>
+</package>

@@ -37,17 +37,25 @@
     <DocumentationFile>bin\Release\Azavea.Open.DAO.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="GeoAPI, Version=1.6.4447.25411, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
+    <Reference Include="Azavea.Open.Common, Version=2.1.1.26128, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>lib\geoapi\GeoAPI.dll</HintPath>
+      <HintPath>packages\Azavea.Open.Common.2.1.1\lib\net20\Azavea.Open.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="GeoAPI">
+      <HintPath>packages\GeoAPI.1.7.1\lib\net20\GeoAPI.dll</HintPath>
     </Reference>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Azavea.Open.Common\lib\log4net\log4net.dll</HintPath>
+      <HintPath>packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
     </Reference>
-    <Reference Include="nunit.framework, Version=2.5.9.0, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
+    <Reference Include="nunit.framework, Version=2.5.9.10348, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\Azavea.Open.Common\lib\nunit\nunit.framework.dll</HintPath>
+      <HintPath>packages\NUnit.2.5.9.10348\lib\nunit.framework.dll</HintPath>
+    </Reference>
+    <Reference Include="nunit.mocks">
+      <HintPath>packages\NUnit.2.5.9.10348\lib\nunit.mocks.dll</HintPath>
+    </Reference>
+    <Reference Include="pnunit.framework">
+      <HintPath>packages\NUnit.2.5.9.10348\lib\pnunit.framework.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
@@ -171,33 +179,18 @@
     <Compile Include="Util\PseudoJoinSorter.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Azavea.Open.Common\Azavea.Open.Common.csproj">
-      <Project>{ADBFE412-4F06-454A-AAF5-E93719E3B1FD}</Project>
-      <Name>Azavea.Open.Common</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
+    <None Include="Azavea.Open.DAO.nuspec" />
+    <None Include="packages.config" />
     <None Include="Tests\MemoryDao.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Azavea.Open.Common.LICENSE.txt" />
+    <Content Include="Azavea.Open.Common.NamespaceDocs.xml" />
     <Content Include="Azavea.Open.DAO.LICENSE.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Azavea.Open.DAO.NamespaceDocs.xml">
     </Content>
-    <Content Include="..\Azavea.Open.Common\lib\log4net\log4net_LICENSE.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\Azavea.Open.Common\lib\log4net\log4net_NOTICE.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\Azavea.Open.Common\lib\log4net\log4net_README.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\Azavea.Open.Common\lib\nunit\NUnit-2.5.9-Custom_LICENSE.TXT">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="lib\lgpl-2.1.txt" />
     <Content Include="Tests\Mapping.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
