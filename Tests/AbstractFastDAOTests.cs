@@ -500,6 +500,19 @@ namespace Azavea.Open.DAO.Tests
             TestSimpleDeleteHelper(_nameDictDAO);
         }
 
+        /// <exclude/>
+        [Test]
+        public void TestSimpleInsensitiveLike()
+        {
+            DaoCriteria criteria = new DaoCriteria();
+            // Jeff is added to the names table
+            LikeInsensitiveExpression ilike = new LikeInsensitiveExpression("Name", "JEFF");
+            criteria.Expressions.Add(ilike);
+            int count = _nameDAO.GetCount(criteria);
+
+            Assert.AreEqual(1, count, "Case insensitive name was not found");
+        }
+
         private void TestTransactionalInsertDeleteHelper<T>(FastDAO<T> dao, string name) where T : class, new()
         {
             if (!_supportsTransactions)
