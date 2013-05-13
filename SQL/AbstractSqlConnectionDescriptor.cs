@@ -270,5 +270,27 @@ namespace Azavea.Open.DAO.SQL
         {
             return "LOWER";
         }
+
+        /// <summary>
+        /// Not all databases have a case insensitive LIKE operator, such as
+        /// ILIKE in postgres.  Some databases (SQL Server/Access) use LIKE as
+        /// case insensitive by default.
+        /// </summary>
+        /// <returns>True if the database has an operator that compares
+        /// partial value matches case-insensitively.</returns>
+        public virtual bool HasCaseInsensitiveLikeOperator()
+        {
+            return false;
+        }
+
+        /// <summary>
+        /// The specific operator for doing case insensitive expressions
+        /// </summary>
+        /// <returns>The database specific operator which supports case insensitive
+        /// expressions.  LIKE/ILIKE for example.</returns>
+        public virtual string CaseInsensitiveLikeOperator()
+        {
+            throw new NotImplementedException("Case insensitive LIKE is not supported for this connection: " + this);
+        }
     }
 }
