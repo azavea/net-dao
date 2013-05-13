@@ -665,11 +665,28 @@ namespace Azavea.Open.DAO.SQL
             else if (expr is LikeInsensitiveExpression)
             {
                 LikeInsensitiveExpression ilike = (LikeInsensitiveExpression)expr;
-                queryToAddTo.Sql.Append(colPrefix);
-                queryToAddTo.Sql.Append(mapping.AllDataColsByObjAttrs[ilike.Property]);
-                queryToAddTo.Sql.Append(trueOrNot ? " ILIKE " : " NOT ILIKE ");
-                dbDataType = mapping.DataColTypesByObjAttr[ilike.Property];
-                AppendParameter(queryToAddTo, ilike.Value, dbDataType);
+                col = colPrefix + mapping.AllDataColsByObjAttrs[ilike.Property];
+                if (_connDesc.HasCaseInsensitiveLikeOperator())
+                {
+                    string iLikeOperator = _connDesc.CaseInsensitiveLikeOperator();
+                    queryToAddTo.Sql.Append(col);
+                    queryToAddTo.Sql.Append(trueOrNot
+                                                ? String.Format(" {0} ", iLikeOperator)
+                                                : String.Format(" NOT {0} ", iLikeOperator));
+                    dbDataType = mapping.DataColTypesByObjAttr[ilike.Property];
+                    AppendParameter(queryToAddTo, ilike.Value, dbDataType);
+                }
+                else
+                {
+                    string lower = _connDesc.LowerCaseFunction();
+                    queryToAddTo.Sql.Append(lower).Append("(");
+                    queryToAddTo.Sql.Append(col).Append(") ");
+                    queryToAddTo.Sql.Append(trueOrNot ? "LIKE " : "NOT LIKE ").Append(lower).Append("(");
+                    dbDataType = mapping.DataColTypesByObjAttr[ilike.Property];
+                    AppendParameter(queryToAddTo, ilike.Value, dbDataType);
+                    queryToAddTo.Sql.Append(")");
+                }
+                
             }
             else if (expr is PropertyInListExpression)
             {
