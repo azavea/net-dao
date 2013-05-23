@@ -43,8 +43,9 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>packages\Azavea.Open.Common.2.1.6\lib\net20\Azavea.Open.Common.dll</HintPath>
     </Reference>
-    <Reference Include="GeoAPI">
-      <HintPath>packages\GeoAPI.1.7.1\lib\net20\GeoAPI.dll</HintPath>
+    <Reference Include="GeoAPI, Version=1.7.0.0, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>packages\GeoAPI.1.7.0\lib\net20\GeoAPI.dll</HintPath>
     </Reference>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
       <HintPath>packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
@@ -175,7 +176,9 @@
     <Compile Include="Util\PseudoJoinSorter.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Azavea.Open.DAO.nuspec" />
+    <None Include="Azavea.Open.DAO.nuspec">
+      <SubType>Designer</SubType>
+    </None>
     <None Include="packages.config" />
     <None Include="Tests\MemoryDao.config" />
   </ItemGroup>
