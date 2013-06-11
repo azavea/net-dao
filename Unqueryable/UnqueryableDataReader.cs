@@ -516,7 +516,7 @@ namespace Azavea.Open.DAO.Unqueryable
                         // a simple replace.
                         regexStr = regexStr.Replace("%", ".*");
                         regexStr = regexStr.Replace("_", ".");
-                        if (Regex.IsMatch(actualValue.ToString().ToUpper(), regexStr.ToUpper()))
+                        if (!Regex.IsMatch(actualValue.ToString().ToUpper(), regexStr.ToUpper()))
                         {
                             if (_log.IsDebugEnabled)
                             {
