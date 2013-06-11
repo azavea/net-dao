@@ -37,26 +37,5 @@ namespace Azavea.Open.DAO.Tests
                 new FastDAO<JoinClass1>(new Config("..\\..\\Tests\\MemoryDao.config", "MemoryDaoConfig"), "DAO"),
                 new FastDAO<JoinClass2>(new Config("..\\..\\Tests\\MemoryDao.config", "MemoryDaoConfig"), "DAO2"),
                 false, true, true, true, true) { }
-
-        /// <exclude/>
-        [TestFixtureSetUp]
-        public void Init()
-        {
-            // Populate the data to join.
-            FastDAO<JoinClass1> dao1 = new FastDAO<JoinClass1>(
-                new Config("..\\..\\Tests\\MemoryDao.config", "MemoryDaoConfig"), "DAO");
-            dao1.Insert(new JoinClass1("one"));
-            dao1.Insert(new JoinClass1("two"));
-            dao1.Insert(new JoinClass1("three"));
-            dao1.Insert(new JoinClass1("four"));
-            dao1.Insert(new JoinClass1("five"));
-            FastDAO<JoinClass2> dao2 = new FastDAO<JoinClass2>(
-                new Config("..\\..\\Tests\\MemoryDao.config", "MemoryDaoConfig"), "DAO2");
-            dao2.Insert(new JoinClass2("one"));
-            dao2.Insert(new JoinClass2("two"));
-            dao2.Insert(new JoinClass2("three"));
-            dao2.Insert(new JoinClass2("4"));
-            dao2.Insert(new JoinClass2("5"));
-        }
     }
 }

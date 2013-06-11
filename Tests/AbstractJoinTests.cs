@@ -63,7 +63,7 @@ namespace Azavea.Open.DAO.Tests
         /// 
         /// It will then insert all rows needed for the tests.
         /// </summary>
-        [TestFixtureSetUp]
+        [SetUp]
         public void ResetAllTables()
         {
             AbstractFastDAOTests.ResetTable(_dao1.DataAccessLayer, _dao1.ClassMap);

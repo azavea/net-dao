@@ -127,7 +127,7 @@ namespace Azavea.Open.DAO.Tests
         /// 
         /// It will then insert all rows needed for the tests.
         /// </summary>
-        [TestFixtureSetUp]
+        [SetUp]
         public void ResetAllTables()
         {
             ResetStoreHouse(_nameDAO.DataAccessLayer);
