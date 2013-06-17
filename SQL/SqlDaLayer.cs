@@ -101,6 +101,12 @@ namespace Azavea.Open.DAO.SQL
         protected virtual void PreProcessPropertyValues(string table,
                                                         IDictionary<string, object> propValues) { }
 
+        protected virtual IDictionary<string, string> GetValueStrings(string table,
+                                                                      IDictionary<string, object> propValues)
+        {
+            return null;
+        }
+
         #endregion
 
         #region IFastDaoLayer Members
@@ -110,8 +116,10 @@ namespace Azavea.Open.DAO.SQL
         {
             List<object> sqlParams = DbCaches.ObjectLists.Get();
 
+            // This must be run BEFORE PreProcessPropertyValues, since PreProcessPropertyValues can mutate the collection
+            var valueStrings = GetValueStrings(mapping.Table, propValues);
             PreProcessPropertyValues(mapping.Table, propValues);
-            string sql = SqlUtilities.MakeInsertStatement(mapping.Table, propValues, sqlParams);
+            string sql = SqlUtilities.MakeInsertStatement(mapping.Table, propValues, sqlParams, valueStrings);
             int numRecs = SqlConnectionUtilities.XSafeCommand(_connDesc, (SqlTransaction)transaction, sql, sqlParams);
 
             if (numRecs != 1)
@@ -128,6 +136,8 @@ namespace Azavea.Open.DAO.SQL
         /// <exclude/>
         public override int Update(ITransaction transaction, ClassMapping mapping, DaoCriteria crit, IDictionary<string, object> propValues)
         {
+            // This must be run BEFORE PreProcessPropertyValues, since PreProcessPropertyValues can mutate the collection
+            var valueStrings = GetValueStrings(mapping.Table, propValues);
             PreProcessPropertyValues(mapping.Table, propValues);
 
             SqlDaQuery query = _sqlQueryCache.Get();
@@ -149,7 +159,15 @@ namespace Azavea.Open.DAO.SQL
                         first = false;
                     }
                     query.Sql.Append(key);
-                    query.Sql.Append(" = ?");
+                    if (valueStrings != null && valueStrings.ContainsKey(key))
+                    {
+                        query.Sql.Append(" = " + valueStrings[key]);
+                    }   
+                    else
+                    {
+                        query.Sql.Append(" = ?");
+                    }
+                    
                     query.Params.Add(propValues[key]);
                 }
                 // Add the "where blah, blah, blah" part.

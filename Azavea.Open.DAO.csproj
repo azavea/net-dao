@@ -157,6 +157,9 @@
     <Compile Include="Tests\MemoryDaoTests.cs" />
     <Compile Include="Tests\PseudoJoinTests.cs" />
     <Compile Include="Tests\SqlUtilTests.cs" />
+    <Compile Include="Tests\TestCommand.cs">
+      <SubType>Component</SubType>
+    </Compile>
     <Compile Include="Unqueryable\UnqueryableDaLayer.cs" />
     <Compile Include="Unqueryable\UnqueryableDataReader.cs" />
     <Compile Include="Unqueryable\UnqueryableQuery.cs" />

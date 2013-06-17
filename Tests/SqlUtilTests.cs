@@ -23,6 +23,8 @@
 
 using System;
 using System.Collections.Generic;
+using System.Data;
+using System.Data.Common;
 using Azavea.Open.Common;
 using Azavea.Open.DAO.SQL;
 using NUnit.Framework;
@@ -183,6 +185,92 @@ namespace Azavea.Open.DAO.Tests
             Assert.AreEqual("INTCOL", map.AllObjAttrsByDataCol["IntCol"], "Column was mapped incorrectly.");
             Assert.AreEqual("FLOATCOL", map.AllObjAttrsByDataCol["FloatCol"], "Column was mapped incorrectly.");
             Assert.AreEqual("DATECOL", map.AllObjAttrsByDataCol["DateCol"], "Column was mapped incorrectly.");
+        }
+
+        /// <exclude/>
+        [Test]
+        public void FindSingleParameterPlaceholderInSql()
+        {
+            const string sql = "SELECT NAME FROM TABLE WHERE COL = ?";
+            AssertParameterPlaceholders(sql, sql.Length - 1);
+        }
+
+        /// <exclude/>
+        [Test]
+        public void FindTwoParameterPlaceholdersInSql()
+        {
+            const string sql = "SELECT NAME FROM TABLE WHERE COL = ? AND COL2 = ?";
+            AssertParameterPlaceholders(sql, 35, sql.Length - 1);
+        }
+
+        /// <exclude/>
+        [Test]
+        public void SkipParameterPlaceholdersInSingleQuottedString()
+        {
+            const string sql = "SELECT NAME FROM TABLE WHERE COL = 'Any bread?'";
+            AssertParameterPlaceholders(sql);
+        }
+
+        /// <exclude/>
+        [Test]
+        public void SkipParameterPlaceholdersInDoubleQuottedString()
+        {
+            const string sql = "SELECT NAME FROM TABLE WHERE \"COL?\" = 3";
+            AssertParameterPlaceholders(sql);
+        }
+
+        /// <exclude/>
+        [Test]
+        public void ParameterPlaceholderAfterSingleQuotedStringIsFound()
+        {
+            const string sql = "SELECT NAME FROM TABLE WHERE COL = 'Any bread?' AND COL2 = ?";
+            AssertParameterPlaceholders(sql, sql.Length - 1);
+        }
+
+        /// <exclude/>
+        [Test]
+        public void ParameterPlaceholderAfterDoubleQuotedStringIsFound()
+        {
+            const string sql = "SELECT NAME FROM TABLE WHERE \"COL?\" = ?";
+            AssertParameterPlaceholders(sql, sql.Length - 1);
+        }
+
+        /// <exclude/>
+        [Test]
+        public void FindParameterPlaceholdersInACommand()
+        {
+            var cmd = new TestCommand("SELECT NAME FROM TABLE WHERE \"COL?\" = ?");
+            AssertParameterPlaceholders(cmd, cmd.CommandText.Length - 1);
+        }
+
+        /// <exclude/>
+        [Test]
+        [ExpectedException(typeof (ArgumentException))]
+        public void FindParametersThrowsIfACommandisStoredProcedure()
+        {
+            var cmd = new TestCommand { CommandText = "spSomeProc", CommandType = CommandType.StoredProcedure };
+            AssertParameterPlaceholders(cmd);
+        }
+
+        /// <exclude/>
+        [Test]
+        [ExpectedException(typeof(ArgumentException))]
+        public void FindParametersThrowsIfACommandIsTableDirect()
+        {
+            var cmd = new TestCommand { CommandText = "SomeTable", CommandType = CommandType.TableDirect };
+            AssertParameterPlaceholders(cmd);
+        }
+
+        private static void AssertParameterPlaceholders(DbCommand cmd, params int[] expected)
+        {
+            var actual = SqlUtilities.FindParameterPlaceholders(cmd);
+            Assert.AreEqual(expected, actual);
+        }
+
+        private static void AssertParameterPlaceholders(string sql, params int[] expected)
+        {
+            var actual = SqlUtilities.FindParameterPlaceholders(sql);
+            Assert.AreEqual(expected, actual);
         }
     }
 }
