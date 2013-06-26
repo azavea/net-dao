@@ -640,7 +640,7 @@ namespace Azavea.Open.DAO
         /// </summary>
         /// <param name="criteria">The criteria specifying which objects to update. May be null</param>
         /// <param name="propName">The property or field to be modified</param>
-        /// /// <param name="value">The new value for the property</param>
+        /// <param name="value">The new value for the property</param>
         public virtual void UpdateColumn(DaoCriteria criteria, string propName, object value)
         {
             IList<T> objects = Get(criteria);
@@ -1552,7 +1552,14 @@ namespace Azavea.Open.DAO
             }
         }
 
-        protected void SetValueOnObjectProperty(T dataObj, object memberValue, MemberInfo info)
+        /// <summary>
+        /// Given an object and a MemberInfo object
+        /// set the given memberValue onto the object's property.
+        /// </summary>
+        /// <param name="dataObj">Object to set the value upon.</param>
+        /// <param name="memberValue">The new value to set</param>
+        /// <param name="info">The metadata pertaining to the object property (taken from the ClassMapping)</param>
+        protected virtual void SetValueOnObjectProperty(T dataObj, object memberValue, MemberInfo info)
         {
             // Don't call MemberType getter twice
             MemberTypes type = info.MemberType;
