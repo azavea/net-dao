@@ -474,6 +474,52 @@ namespace Azavea.Open.DAO.Tests
             AssertOneName(_nameDictDAO, changed2, fromDBName2["ID"], "Checking name2 after updating");
         }
 
+        /// <exclude/>
+        [Test]
+        public void TestUpdateColumn()
+        {
+            string name1 = "Carissa";
+            string changed = "CarissaCHANGED";
+
+            InsertName(_nameDAO, name1, 400);
+
+            NameClass fromDBName = AssertOneName(_nameDAO, name1, "Inserting before updating");
+            
+            DaoCriteria criteria = new DaoCriteria();
+            criteria.Expressions.Add(new EqualExpression("ID", GetNameId(fromDBName)));
+
+            _nameDAO.UpdateColumn(criteria, "Name", changed);
+
+            AssertOneName(_nameDAO, changed, GetNameId(fromDBName), "Checking updated name");
+        }
+
+        /// <exclude/>
+        [Test]
+        public void TestUpdateColumns()
+        {
+            string name1 = "Carissa";
+            string name2 = "Melissa";
+            string name3 = "Alyssa";
+            string changed = "Sam";
+
+            InsertName(_nameDAO, name1, 400);
+            InsertName(_nameDAO, name2, 500);
+            InsertName(_nameDAO, name3, 600);
+
+            NameClass fromDBName1 = AssertOneName(_nameDAO, name1, "Inserting before updating");
+            NameClass fromDBName2 = AssertOneName(_nameDAO, name2, "Inserting before updating");
+            NameClass fromDBName3 = AssertOneName(_nameDAO, name3, "Inserting before updating");
+
+            DaoCriteria criteria = new DaoCriteria();
+            criteria.Expressions.Add(new PropertyInListExpression("Name", new [] { name1, name2 }));
+
+            _nameDAO.UpdateColumn(criteria, "Name", changed);
+
+            AssertOneName(_nameDAO, changed, GetNameId(fromDBName1), "Checking updated name");
+            AssertOneName(_nameDAO, changed, GetNameId(fromDBName2), "Checking updated name");
+            AssertOneName(_nameDAO, name3, GetNameId(fromDBName3), "Checking name not updated");
+        }
+
         private static void TestSimpleDeleteHelper<T>(FastDAO<T> dao) where T : class, new()
         {
             string nameToInsert = "Andrew";
@@ -498,6 +544,19 @@ namespace Azavea.Open.DAO.Tests
         public void TestSimpleDeleteDictionary()
         {
             TestSimpleDeleteHelper(_nameDictDAO);
+        }
+
+        /// <exclude/>
+        [Test]
+        public void TestSimpleInsensitiveLike()
+        {
+            DaoCriteria criteria = new DaoCriteria();
+            // Jeff is added to the names table
+            LikeInsensitiveExpression ilike = new LikeInsensitiveExpression("Name", "JEFF");
+            criteria.Expressions.Add(ilike);
+            int count = _nameDAO.GetCount(criteria);
+
+            Assert.AreEqual(1, count, "Case insensitive name was not found");
         }
 
         private void TestTransactionalInsertDeleteHelper<T>(FastDAO<T> dao, string name) where T : class, new()

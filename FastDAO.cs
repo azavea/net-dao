@@ -634,6 +634,32 @@ namespace Azavea.Open.DAO
                 _log.Warn("UpdateBatch was called without any objects in the collection.");
             }
         }
+        /// <summary>
+        /// Updates a single column on a bunch of records, hopefully to be easier than separate
+        /// calls to Get() and Update().  Whether it is faster or not depends on the implementation.
+        /// </summary>
+        /// <param name="criteria">The criteria specifying which objects to update. May be null</param>
+        /// <param name="propName">The property or field to be modified</param>
+        /// <param name="value">The new value for the property</param>
+        public virtual void UpdateColumn(DaoCriteria criteria, string propName, object value)
+        {
+            IList<T> objects = Get(criteria);
+
+            MemberInfo info = _classMap.AllObjMemberInfosByObjAttr[propName];
+            foreach (T obj in objects)
+            {
+                SetValueOnObjectProperty(obj, value, info);
+            }
+
+            if (objects.Count > 0)
+            {
+                Update(objects);
+            }
+            else
+            {
+                _log.Warn("UpdateColumn was called, but no objects were returned by the criteria.");
+            }
+        }
         #endregion
 
         #region Querying
@@ -1517,29 +1543,41 @@ namespace Azavea.Open.DAO
             try
             {
                 info = classMap.AllObjMemberInfosByDataCol[colName];
-                // Don't call MemberType getter twice
-                MemberTypes type = info.MemberType;
-                if (type == MemberTypes.Field)
-                {
-                    FieldInfo fInfo = ((FieldInfo) info);
-                    object newValue = memberValue == null
-                                          ? null
-                                          : _dataAccessLayer.CoerceType(fInfo.FieldType, memberValue);
-                    fInfo.SetValue(dataObj, newValue);
-                }
-                else if (type == MemberTypes.Property)
-                {
-                    PropertyInfo pInfo = ((PropertyInfo) info);
-                    object newValue = memberValue == null
-                                          ? null
-                                          : _dataAccessLayer.CoerceType(pInfo.PropertyType, memberValue);
-                    pInfo.SetValue(dataObj, newValue, null);
-                }
+                SetValueOnObjectProperty(dataObj, memberValue, info);
             }
             catch (Exception e)
             {
                 throw new LoggingException("Unable to set value (" + memberValue + ") from column " + colName +
                     " to member " + (info == null ? "<null>" : info.Name) + " on type " + classMap.TypeName, e);
+            }
+        }
+
+        /// <summary>
+        /// Given an object and a MemberInfo object
+        /// set the given memberValue onto the object's property.
+        /// </summary>
+        /// <param name="dataObj">Object to set the value upon.</param>
+        /// <param name="memberValue">The new value to set</param>
+        /// <param name="info">The metadata pertaining to the object property (taken from the ClassMapping)</param>
+        protected virtual void SetValueOnObjectProperty(T dataObj, object memberValue, MemberInfo info)
+        {
+            // Don't call MemberType getter twice
+            MemberTypes type = info.MemberType;
+            if (type == MemberTypes.Field)
+            {
+                FieldInfo fInfo = ((FieldInfo) info);
+                object newValue = memberValue == null
+                                      ? null
+                                      : _dataAccessLayer.CoerceType(fInfo.FieldType, memberValue);
+                fInfo.SetValue(dataObj, newValue);
+            }
+            else if (type == MemberTypes.Property)
+            {
+                PropertyInfo pInfo = ((PropertyInfo) info);
+                object newValue = memberValue == null
+                                      ? null
+                                      : _dataAccessLayer.CoerceType(pInfo.PropertyType, memberValue);
+                pInfo.SetValue(dataObj, newValue, null);
             }
         }
 
