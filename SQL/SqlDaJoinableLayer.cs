@@ -477,6 +477,23 @@ namespace Azavea.Open.DAO.SQL
                 queryToAddTo.Sql.Append(rightPrefix);
                 queryToAddTo.Sql.Append(rightMapping.AllDataColsByObjAttrs[lesser.RightProperty]);
             }
+            else if (expr is AbstractPropertyValueJoinExpression)
+            {
+                var joinExpr = (AbstractPropertyValueJoinExpression) expr;
+                
+                var prefix = leftPrefix;
+                var mapping = leftMapping;
+                if (expr is RightPropertyValueEqualJoinExpression)
+                {
+                    prefix = rightPrefix;
+                    mapping = rightMapping;
+                }
+                var dbDataType = mapping.DataColTypesByObjAttr[joinExpr.Property];
+                queryToAddTo.Sql.Append(prefix);
+                queryToAddTo.Sql.Append(mapping.AllDataColsByObjAttrs[joinExpr.Property]);
+                queryToAddTo.Sql.Append(expr.TrueOrNot() ? " = " : " <> ");
+                AppendParameter(queryToAddTo, joinExpr.Value, dbDataType);
+            }
             else
             {
                 throw new NotSupportedException("Expression type '" + expr.GetType() + "' is not supported.");
