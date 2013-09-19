@@ -673,6 +673,24 @@ namespace Azavea.Open.DAO.Tests
                               new string[] { "two", "three", null, "two", "one", "two", "three", "four", "five", "one", "two", "three", "four", "five" },
                               "Right join, 2 < 1");
         }
+
+        /// <exclude/>
+        [Test]
+        public void TestPropertyValueLeftOuterJoin()
+        {
+            if (!_supportsLeftOuter)
+            {
+                Assert.Ignore("This data source does not support left outer joins.");
+            }
+
+            var crit = new DaoJoinCriteria(JoinType.LeftOuter, new EqualJoinExpression("JoinField", "JoinField"));
+            crit.Expressions.Add(new LeftPropertyValueEqualJoinExpression("Name", "Bob"));
+            AssertJoinResults(_dao1, _dao2, crit,
+                              new [] {"one", "two", "three", "four", "five"},
+                              new [] {"one", null, null, null, null},
+                              "Left join, additional filter on Left.Name");
+
+        }
     }
 
     /// <exclude/>
