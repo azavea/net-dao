@@ -65,6 +65,9 @@
     <Compile Include="Criteria\Grouping\AbstractGroupExpression.cs" />
     <Compile Include="Criteria\Grouping\GroupCountSortOrder.cs" />
     <Compile Include="Criteria\Grouping\MemberGroupExpression.cs" />
+    <Compile Include="Criteria\Joins\AbstractPropertyValueJoinExpression.cs" />
+    <Compile Include="Criteria\Joins\LeftPropertyValueEqualJoinExpression.cs" />
+    <Compile Include="Criteria\Joins\RightPropertyValueEqualJoinExpression.cs" />
     <Compile Include="Exceptions\TransactionsNotSupportedException.cs" />
     <Compile Include="GroupCountResult.cs" />
     <Compile Include="IConnectionDescriptor.cs" />
