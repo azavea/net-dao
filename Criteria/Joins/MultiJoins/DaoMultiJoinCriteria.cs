@@ -28,83 +28,59 @@ using log4net;
 namespace Azavea.Open.DAO.Criteria.Joins.MultiJoins
 {
     /// <summary>
-    /// This interface implements nothing.  It's purpose is to ensure that all
-    /// of the expressions in DaoMultiJoinCriteria.Expressions inherit from
-    /// either AbstractOnePropertyEachMultiJoinExpression
-    /// or PropertyValueEqualMultiJoinExpression
-    /// </summary>
-    public interface IMultiJoinExpression : IJoinExpression {}
-
-    /// <summary>
-    /// This class defines how to join two FastDAOs together.
+    /// This class defines how to join a FastDAO to others.
     /// </summary>
     public class DaoMultiJoinCriteria
     {
-        /// <summary>
-        /// log4net logger for logging any appropriate messages.
-        /// </summary>
-        protected static ILog _log = LogManager.GetLogger(
-            new System.Diagnostics.StackTrace().GetFrame(0).GetMethod().DeclaringType.Namespace);
-
         /// <summary>
         /// The individual expressions that make up this criteria, defaults to empty.
         /// </summary>
         public readonly List<IMultiJoinExpression> Expressions = new List<IMultiJoinExpression>();
 
         /// <summary>
-        /// The list of properties to sort on, defaults to empty.
+        /// These are the criteria applied to this DAO's records by themselves.
+        /// I.E. only return rows where this.field == 5.
         /// </summary>
-        public readonly List<MultiJoinSortOrder> Orders = new List<MultiJoinSortOrder>();
+        public DaoCriteria Criteria;
 
         /// <summary>
         /// Whether this is an "AND" criteria or an "OR" criteria.
         /// </summary>
         public BooleanOperator BoolType;
+
         /// <summary>
-        /// Used to limit the data returned, only data rows Start to Start + Limit will be returned.
-        /// A value of -1 means ignore this parameter.
+        /// Whether this is an inner join, left join, etc.
         /// </summary>
-        public int Start = -1;
+        public JoinType TypeOfJoin;
+
         /// <summary>
-        /// Used to limit the data returned, only data rows Start to Start + Limit will be returned.
-        /// A value of -1 means ignore this parameter.
+        /// An alias used in IMultiJoinExpression and MultiJoinSortOrder to distinguish which DAO
+        /// a criteria applies to when the same DAO is joined nultiple times in the same request
+        /// 
+        /// You do not need to set this if there are no DAOs joined multiple times
         /// </summary>
-        public int Limit = -1;
-        /// <summary>
-        /// Constructs a blank inner join criteria, which will return all records unless you customize it.
-        /// All expressions added to it will be ANDed together.
-        /// </summary>
-        public DaoMultiJoinCriteria()
-            : this(null, BooleanOperator.And) { }
-        /// <summary>
-        /// Constructs a criteria with one expression.  May be handy for cases
-        /// where you only need one expression.
-        /// </summary>
-        /// <param name="firstExpr">The first expression to add.</param>
-        public DaoMultiJoinCriteria(IMultiJoinExpression firstExpr)
-            : this(firstExpr, BooleanOperator.And) { }
-        /// <summary>
-        /// Constructs a blank criteria, which will return all records unless you customize it.
-        /// </summary>
-        /// <param name="howToAddExpressions">How expressions will be added together.  Determines
-        ///                                   if we do exp1 AND exp2 AND exp3, or if we do
-        ///                                   exp1 OR exp2 OR exp3.</param>
-        public DaoMultiJoinCriteria(BooleanOperator howToAddExpressions)
-            : this(null, howToAddExpressions) { }
+        public string DaoAlias;
+
         /// <summary>
         /// Constructs a criteria with one expression.
         /// </summary>
+        /// <param name="typeOfJoin">Is this an inner join, left join, etc.</param>
         /// <param name="firstExpr">The first expression to add.</param>
         /// <param name="howToAddExpressions">How expressions will be added together.  Determines
         ///                                   if we do exp1 AND exp2 AND exp3, or if we do
         ///                                   exp1 OR exp2 OR exp3.</param>
-        public DaoMultiJoinCriteria(IMultiJoinExpression firstExpr, BooleanOperator howToAddExpressions)
+        /// <param name="daoAlias">An alias used to determine which DAO a join criteria applies to.
+        ///                        Not necessary unless the same DAO will be joined more than once</param>
+        public DaoMultiJoinCriteria(JoinType typeOfJoin = JoinType.Inner, IMultiJoinExpression firstExpr = null,
+            BooleanOperator howToAddExpressions = BooleanOperator.And, string daoAlias = null)
         {
+            TypeOfJoin = typeOfJoin;
             BoolType = howToAddExpressions;
             if (firstExpr != null)
             {
                 Expressions.Add(firstExpr);
             }
+            DaoAlias = daoAlias;
         }
 
         /// <summary>
@@ -114,9 +90,7 @@ namespace Azavea.Open.DAO.Criteria.Joins.MultiJoins
         {
             BoolType = BooleanOperator.And;
             Expressions.Clear();
-            Orders.Clear();
-            Start = -1;
-            Limit = -1;
+            Criteria = null;
         }
 
         ///<summary>
@@ -130,7 +104,7 @@ namespace Azavea.Open.DAO.Criteria.Joins.MultiJoins
         public override string ToString()
         {
             return "Expressions: " + StringHelper.Join(Expressions) + " (" +
-                   BoolType + "ed), orders: " + StringHelper.Join(Orders);
+                   BoolType + "ed)";
         }
     }
 }

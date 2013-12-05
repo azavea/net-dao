@@ -69,10 +69,16 @@
   <ItemGroup>
     <Compile Include="ClassMapping.cs" />
     <Compile Include="ConnectionDescriptor.cs" />
+    <Compile Include="Criteria\Joins\MultiJoins\IMultiJoinExpression.cs" />
+    <Compile Include="Criteria\Joins\MultiJoins\MultiJoinSortOrder.cs" />
     <Compile Include="IDaMultiJoinableLayer.cs" />
     <Compile Include="IDaMultiJoinQuery.cs" />
+    <Compile Include="Criteria\Joins\MultiJoins\AbstractOnePropertyEachMultiJoinExpression.cs" />
+    <Compile Include="Criteria\Joins\MultiJoins\PropertyValueEqualMultiJoinExpression.cs" />
     <Compile Include="Criteria\Joins\MultiJoins\DaoMultiJoinCriteria.cs" />
-    <Compile Include="Criteria\Joins\MultiJoins\MultiJoinSortOrder.cs" />
+    <Compile Include="Criteria\Joins\MultiJoins\EqualMultiJoinExpression.cs" />
+    <Compile Include="Criteria\Joins\MultiJoins\GreaterMultiJoinExpression.cs" />
+    <Compile Include="Criteria\Joins\MultiJoins\LesserMultiJoinExpression.cs" />
     <Compile Include="IFastDaoJoiner.cs" />
     <Compile Include="Criteria\Grouping\AbstractGroupExpression.cs" />
     <Compile Include="Criteria\Grouping\GroupCountSortOrder.cs" />

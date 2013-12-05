@@ -21,6 +21,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+using Azavea.Open.DAO.Util;
+
 namespace Azavea.Open.DAO.Criteria.Joins.MultiJoins
 {
     /// <summary>
@@ -35,23 +37,25 @@ namespace Azavea.Open.DAO.Criteria.Joins.MultiJoins
         public readonly ClassMapping ClassMap;
 
         /// <summary>
-        /// A simple class that holds a sort criterion for a property from the right or left DAO.
-        /// This constructor creates an "ascending" sort order.
+        /// An alias used to determine which DAO a join criteria applies to.
+        /// Not necessary unless the same DAO is joined more than once
         /// </summary>
-        /// <param name="property">The data class' property to sort on.</param>
-        /// <param name="classMap">The ClassMap of the DAO the sorting property applies to.</param>
-        public MultiJoinSortOrder(string property, ClassMapping classMap)
-            : this(property, SortType.Asc, classMap) { }
+        public readonly string DaoAlias;
+
         /// <summary>
         /// A simple class that holds a sort criterion for a property from the right or left DAO.
         /// </summary>
         /// <param name="property">The data class' property to sort on.</param>
         /// <param name="direction">The direction to sort based on the Property.</param>
         /// <param name="classMap">The ClassMap of the DAO the sorting property applies to.</param>
-        public MultiJoinSortOrder(string property, SortType direction, ClassMapping classMap)
+        /// <param name="daoAlias">An alias used to determine which DAO a join criteria applies to.
+        ///                        Not necessary unless the same DAO will be joined more than once</param>
+        public MultiJoinSortOrder(string property, ClassMapping classMap,
+            SortType direction = SortType.Asc, string daoAlias = null)
             : base(property, direction)
         {
             ClassMap = classMap;
+            DaoAlias = daoAlias ?? FastDAOHelper.GetDaoAlias(classMap);
         }
 
         ///<summary>
