@@ -61,6 +61,14 @@ namespace Azavea.Open.DAO
         public readonly R Right;
 
         /// <summary>
+        /// Empty constructor used to allow IFastDaoJoiner to reconstruct type information
+        /// Not intended for use otherwise
+        /// </summary>
+        public JoinResult() : this(null, null)
+        {
+        }
+
+        /// <summary>
         /// Creates a JoinResult.
         /// </summary>
         /// <param name="leftVal">The object from the left side of the join.
