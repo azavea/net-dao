@@ -24,9 +24,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Linq;
 using Azavea.Open.Common.Caching;
 using Azavea.Open.DAO.Criteria;
 using Azavea.Open.DAO.Criteria.Joins;
+using Azavea.Open.DAO.Criteria.Joins.MultiJoins;
 using Azavea.Open.DAO.Exceptions;
 using Azavea.Open.DAO.Util;
 
@@ -35,7 +37,7 @@ namespace Azavea.Open.DAO.SQL
     /// <summary>
     /// A base class for layers that use SQL and support joins in SQL.
     /// </summary>
-    public class SqlDaJoinableLayer : SqlDaLayer, IDaJoinableLayer
+    public class SqlDaJoinableLayer : SqlDaLayer, IDaJoinableLayer, IDaMultiJoinableLayer
     {
         /// <summary>
         /// Since there are different types of query for different dao layers,
@@ -106,8 +108,7 @@ namespace Azavea.Open.DAO.SQL
         /// <param name="crit">The criteria specifying the requested join.</param>
         /// <param name="leftMapping">Class mapping for the left table we're querying against.</param>
         /// <param name="rightMapping">Class mapping for the right table we're querying against.</param>
-        public IDaJoinQuery CreateJoinQuery(DaoJoinCriteria crit, ClassMapping leftMapping,
-                                                 ClassMapping rightMapping)
+        public IDaJoinQuery CreateJoinQuery(DaoJoinCriteria crit, ClassMapping leftMapping, ClassMapping rightMapping)
         {
             if (crit == null)
             {
@@ -223,6 +224,149 @@ namespace Azavea.Open.DAO.SQL
         }
 
         /// <summary>
+        /// This is not guaranteed to succeed unless CanJoin(rightConn, rightMapping) returns true
+        /// for each DAO which was joined.
+        /// </summary>
+        /// <param name="joinInfos">Objects which contain the classmapping and criteria for each
+        ///                         DAO we are joining.</param>
+        /// <param name="orders">The a list of sort criteria, applied in the order they are given in</param>
+        public IDaJoinQuery CreateJoinQuery(IList<JoinInfo> joinInfos, IList<MultiJoinSortOrder> orders)
+        {
+            return CreateJoinQuery(joinInfos, false, orders);
+        }
+
+        /// <summary>
+        /// This gets a count instead of an actual data retrieval.
+        /// Depending on the data access layer implementation, this may or may not be significantly
+        /// faster than actually executing the normal query and seeing how many results you get back.
+        /// Generally it should be faster.
+        /// </summary>
+        /// <param name="joinInfos">Objects which contain the classmapping and criteria for each
+        ///                         DAO we are joining.</param>
+        /// <param name="transaction">The transaction to run the query in, can be null</param>
+        /// <returns>The number of results that you would get if you ran the actual query.</returns>
+        public int GetCount(IList<JoinInfo> joinInfos, ITransaction transaction = null)
+        {
+            var query = CreateJoinQuery(joinInfos, true, new List<MultiJoinSortOrder>());
+            var retVal = SqlConnectionUtilities.XSafeIntQuery(_connDesc, (SqlTransaction)transaction, query.Sql.ToString(), query.Params);
+            DisposeOfQuery(query);
+            return retVal;
+        }
+
+        private SqlDaJoinQuery CreateJoinQuery(IList<JoinInfo> joinInfos, bool isCount, IList<MultiJoinSortOrder> orders)
+        {
+            if (joinInfos.Count < 2)
+            {
+                throw new ArgumentOutOfRangeException("joinInfos", "Cannot join less than 2 tables");
+            }
+            if (joinInfos.Count > 26)
+            {
+                throw new ArgumentOutOfRangeException("joinInfos", "Tables are aliased by single letters, which prevents joining more than 26 tables.");
+            }
+
+            // Alias tables with incrementing letters (A, B, etc.)
+            var shorten = new Func<int, string>(i => Char.ToString((char)('A' + i)));
+
+            var joinInfoExtras = joinInfos.Select((info, i) =>
+                {
+                    var alias = shorten(i);
+                    var prefix = alias + ".";
+                    return new ExtraJoinInfo
+                        {
+                            TypeOfJoin = info.TypeOfJoin,
+                            Criteria = info.Criteria,
+                            ClassMap = info.ClassMap,
+                            Expressions = info.Expressions,
+                            DaoAlias = info.DaoAlias,
+                            BoolType = info.BoolType,
+                            Alias = alias,
+                            Prefix = prefix
+                        };
+                }).ToList();
+            var extraJoinInfoByDaoAlias = joinInfoExtras.ToDictionary(i => i.DaoAlias);
+
+            var retVal = _sqlJoinQueryCache.Get();
+            retVal.SetPrefixes(joinInfoExtras.Select(i => i.Prefix).ToArray());
+
+            if (isCount)
+            {
+                retVal.Sql.Append("SELECT COUNT(*)");
+            }
+            else
+            {
+                MultiJoinSelectQuery(joinInfoExtras, retVal);
+            }
+
+            retVal.Sql.Append(" FROM ");
+
+            var firstJoinInfoExtra = joinInfoExtras[0];
+            TableToQuery(retVal, firstJoinInfoExtra.Alias, firstJoinInfoExtra.ClassMap);
+            foreach(var joinInfoExtra in joinInfoExtras.Skip(1))
+            {
+                if (joinInfoExtra.TypeOfJoin == null)
+                {
+                    throw new UnableToConstructSqlException("Unable to join table [" + joinInfoExtra.ClassMap.Table + "], no join type provided", _connDesc);
+                }
+                JoinTableToQuery(retVal, (JoinType)joinInfoExtra.TypeOfJoin, joinInfoExtra.Alias, joinInfoExtra.ClassMap);
+                if (joinInfoExtra.Expressions.Count > 0)
+                {
+                    MultiJoinExpressionsToQuery(retVal, extraJoinInfoByDaoAlias, joinInfoExtra);
+                }
+                else
+                {
+                    throw new UnableToConstructSqlException("Unable to join table [" + joinInfoExtra.ClassMap.Table + "], no join expressions were provided", _connDesc);
+                }
+            }
+
+            MultiJoinWhereExpressionsToQuery(retVal, extraJoinInfoByDaoAlias);
+
+            // No need to order the results if we're just counting rows
+            if (!isCount && orders.Count > 0)
+            {
+                retVal.Sql.Append(" ORDER BY ");
+                MultiJoinOrderListToSql(retVal.Sql, orders, extraJoinInfoByDaoAlias);
+            }
+
+            // Don't return the objects to the caches, we'll do that in DisposeOfQuery.
+            return retVal;
+        }
+
+        private void MultiJoinSelectQuery(IEnumerable<ExtraJoinInfo> joinInfoExtras, SqlDaJoinQuery retVal)
+        {
+            var aliasingCols = _connDesc.NeedToAliasColumns();
+            var usingAs = _connDesc.NeedAsForColumnAliases();
+            var colAliasStart = _connDesc.ColumnAliasPrefix();
+            var colAliasEnd = _connDesc.ColumnAliasSuffix();
+
+            var first = true;
+
+            retVal.Sql.Append("SELECT ");
+            foreach (var joinInfo in joinInfoExtras)
+            {
+                foreach (string col in joinInfo.ClassMap.AllDataColsByObjAttrs.Values)
+                {
+                    if (first)
+                    {
+                        first = false;
+                    }
+                    else
+                    {
+                        retVal.Sql.Append(", ");
+                    }
+                    retVal.Sql.Append(joinInfo.Prefix).Append(col);
+                    if (aliasingCols)
+                    {
+                        retVal.Sql.Append(usingAs ? " AS " : " ")
+                              .Append(colAliasStart)
+                              .Append(usingAs ? joinInfo.Alias : joinInfo.Prefix).Append(col)
+                              .Append(colAliasEnd);
+                    }
+                }
+            }
+        }
+
+
+        /// <summary>
         /// Append all the join expressions ("ON blah = blah WHERE a.blah = 5 AND b.blah = 10" etc)
         /// to the query.
         /// </summary>
@@ -266,6 +410,65 @@ namespace Azavea.Open.DAO.SQL
         }
 
         /// <summary>
+        /// Append all the join expressions ("ON blah = blah WHERE a.blah = 5 AND b.blah = 10" etc)
+        /// to the query.
+        /// </summary>
+        private void MultiJoinWhereExpressionsToQuery(SqlDaJoinQuery query, IDictionary<string, ExtraJoinInfo> joinInfoByTableName)
+        {
+            bool addedWhere = false;
+            foreach (var info in joinInfoByTableName.Values)
+            {
+                if (info.Criteria != null && info.Criteria.Expressions.Count > 0)
+                {
+                    if (addedWhere)
+                    {
+                        query.Sql.Append(" AND ");
+                    }
+                    else
+                    {
+                        query.Sql.Append(" WHERE ");
+                        addedWhere = true;
+                    }
+                    ExpressionListToQuery(query, info.Criteria.BoolType,
+                                          info.Criteria.Expressions, info.ClassMap, info.Prefix);
+                }
+            }
+        }
+
+        private void MultiJoinExpressionsToQuery(SqlDaJoinQuery query, IDictionary<string, ExtraJoinInfo> joinInfoByAlias,
+            ExtraJoinInfo extraJoinInfo)
+        {
+            query.Sql.Append(" ON ");
+            // starts out false for the first one.
+            bool needsBooleanOperator = false;
+            string boolText = BoolTypeToString(extraJoinInfo.BoolType);
+            foreach (IMultiJoinExpression expr in extraJoinInfo.Expressions)
+            {
+                try
+                {
+                    if (expr == null)
+                    {
+                        throw new NullReferenceException("Can't convert a null join expression to SQL.");
+                    }
+
+                    var leftInfo = joinInfoByAlias[expr.OtherDaoAlias];
+                    var rightInfo = extraJoinInfo;
+
+                    // After the first guy writes something, we need an operator.
+                    if (JoinExpressionToQuery(query, expr, leftInfo.ClassMap, rightInfo.ClassMap,
+                                              leftInfo.Prefix, rightInfo.Prefix, needsBooleanOperator ? boolText : ""))
+                    {
+                        needsBooleanOperator = true;
+                    }
+                }
+                catch (Exception e)
+                {
+                    throw new UnableToConstructSqlException("Unable to add join expression to query: " + expr, _connDesc, e);
+                }
+            }
+        }
+
+        /// <summary>
         /// Append the names of the tables ("BlahTable as left, FooTable as right") to the query.
         /// </summary>
         /// <param name="query"></param>
@@ -277,10 +480,20 @@ namespace Azavea.Open.DAO.SQL
         private void TablesToQuery(SqlDaJoinQuery query, DaoJoinCriteria crit, string leftAlias, string rightAlias,
             ClassMapping leftMapping, ClassMapping rightMapping)
         {
-            query.Sql.Append(leftMapping.Table).Append(" ")
-                .Append(_connDesc.TableAliasPrefix()).Append(leftAlias)
-                .Append(_connDesc.TableAliasSuffix());
-            switch (crit.TypeOfJoin)
+            TableToQuery(query, leftAlias, leftMapping);
+            JoinTableToQuery(query, crit.TypeOfJoin, rightAlias, rightMapping);
+        }
+
+        private void TableToQuery(SqlDaJoinQuery query, string alias, ClassMapping mapping)
+        {
+            query.Sql.Append(mapping.Table).Append(" ")
+                 .Append(_connDesc.TableAliasPrefix()).Append(alias)
+                 .Append(_connDesc.TableAliasSuffix());
+        }
+
+        private void JoinTableToQuery(SqlDaJoinQuery query, JoinType joinType, string rightAlias, ClassMapping rightMapping)
+        {
+            switch (joinType)
             {
                 case JoinType.Inner:
                     query.Sql.Append(" INNER JOIN ");
@@ -295,13 +508,12 @@ namespace Azavea.Open.DAO.SQL
                     query.Sql.Append(" ").Append(_connDesc.FullOuterJoinKeyword()).Append(" ");
                     break;
                 default:
-                    throw new NotSupportedException("Join type " + crit.TypeOfJoin +
+                    throw new NotSupportedException("Join type " + joinType +
                                                     " is not yet supported.");
             }
-            query.Sql.Append(rightMapping.Table).Append(" ")
-                .Append(_connDesc.TableAliasPrefix()).Append(rightAlias)
-                .Append(_connDesc.TableAliasSuffix());
+            TableToQuery(query, rightAlias, rightMapping);
         }
+
 
         /// <summary>
         /// Override to handle join queries differently.
@@ -350,25 +562,54 @@ namespace Azavea.Open.DAO.SQL
                     mappingToUse = rightMapping;
                     prefixToUse = rightPrefix;
                 }
-                switch (order.Direction)
+                AddOrderToQuery(orderClauseToAddTo, order, prefixToUse, mappingToUse);
+            }
+        }
+
+        /// <summary>
+        /// Converts the list of SortOrders from this criteria into SQL, and appends to the
+        /// given string builder.
+        /// </summary>
+        private static void MultiJoinOrderListToSql(StringBuilder orderClauseToAddTo, IList<MultiJoinSortOrder> orders,
+            IDictionary<string, ExtraJoinInfo> joinInfoByAlias)
+        {
+            bool first = true;
+            foreach (MultiJoinSortOrder order in orders)
+            {
+                if (first)
                 {
-                    case SortType.Asc:
-                        orderClauseToAddTo.Append(prefixToUse).
-                            Append(mappingToUse.AllDataColsByObjAttrs[order.Property]).
-                            Append(" ASC");
-                        break;
-                    case SortType.Desc:
-                        orderClauseToAddTo.Append(prefixToUse).
-                            Append(mappingToUse.AllDataColsByObjAttrs[order.Property]).
-                            Append(" DESC");
-                        break;
-                    case SortType.Computed:
-                        orderClauseToAddTo.Append(order.Property);
-                        break;
-                    default:
-                        throw new NotSupportedException("Sort type '" + order.Direction +
-                                                        "' not supported.");
+                    first = false;
                 }
+                else
+                {
+                    orderClauseToAddTo.Append(", ");
+                }
+                var joinInfo = joinInfoByAlias[order.DaoAlias];
+                AddOrderToQuery(orderClauseToAddTo, order, joinInfo.Prefix, order.ClassMap);
+            }
+        }
+
+        private static void AddOrderToQuery(StringBuilder orderClauseToAddTo, SortOrder order, string prefixToUse,
+                                            ClassMapping mappingToUse)
+        {
+            switch (order.Direction)
+            {
+                case SortType.Asc:
+                    orderClauseToAddTo.Append(prefixToUse).
+                                       Append(mappingToUse.AllDataColsByObjAttrs[order.Property]).
+                                       Append(" ASC");
+                    break;
+                case SortType.Desc:
+                    orderClauseToAddTo.Append(prefixToUse).
+                                       Append(mappingToUse.AllDataColsByObjAttrs[order.Property]).
+                                       Append(" DESC");
+                    break;
+                case SortType.Computed:
+                    orderClauseToAddTo.Append(order.Property);
+                    break;
+                default:
+                    throw new NotSupportedException("Sort type '" + order.Direction +
+                                                    "' not supported.");
             }
         }
 
@@ -450,32 +691,27 @@ namespace Azavea.Open.DAO.SQL
             queryToAddTo.Sql.Append(booleanOperator);
             // Add some parends.
             queryToAddTo.Sql.Append("(");
-            if (expr is EqualJoinExpression)
+            if (expr is AbstractOnePropertyEachJoinExpression)
             {
-                EqualJoinExpression equal = (EqualJoinExpression)expr;
+                var expression = (AbstractOnePropertyEachJoinExpression) expr;
                 queryToAddTo.Sql.Append(leftPrefix);
-                queryToAddTo.Sql.Append(leftMapping.AllDataColsByObjAttrs[equal.LeftProperty]);
-                queryToAddTo.Sql.Append(expr.TrueOrNot() ? " = " : " <> ");
+                queryToAddTo.Sql.Append(leftMapping.AllDataColsByObjAttrs[expression.LeftProperty]);
+
+                if (expr is EqualJoinExpression || expr is EqualMultiJoinExpression)
+                {
+                    queryToAddTo.Sql.Append(expr.TrueOrNot() ? " = " : " <> ");
+                }
+                else if (expr is GreaterJoinExpression || expr is GreaterMultiJoinExpression)
+                {
+                    queryToAddTo.Sql.Append(expr.TrueOrNot() ? " > " : " <= ");
+                }
+                else if (expr is LesserJoinExpression || expr is LesserMultiJoinExpression)
+                {
+                    queryToAddTo.Sql.Append(expr.TrueOrNot() ? " < " : " >= ");
+                }
+
                 queryToAddTo.Sql.Append(rightPrefix);
-                queryToAddTo.Sql.Append(rightMapping.AllDataColsByObjAttrs[equal.RightProperty]);
-            }
-            else if (expr is GreaterJoinExpression)
-            {
-                GreaterJoinExpression greater = (GreaterJoinExpression)expr;
-                queryToAddTo.Sql.Append(leftPrefix);
-                queryToAddTo.Sql.Append(leftMapping.AllDataColsByObjAttrs[greater.LeftProperty]);
-                queryToAddTo.Sql.Append(expr.TrueOrNot() ? " > " : " <= ");
-                queryToAddTo.Sql.Append(rightPrefix);
-                queryToAddTo.Sql.Append(rightMapping.AllDataColsByObjAttrs[greater.RightProperty]);
-            }
-            else if (expr is LesserJoinExpression)
-            {
-                LesserJoinExpression lesser = (LesserJoinExpression)expr;
-                queryToAddTo.Sql.Append(leftPrefix);
-                queryToAddTo.Sql.Append(leftMapping.AllDataColsByObjAttrs[lesser.LeftProperty]);
-                queryToAddTo.Sql.Append(expr.TrueOrNot() ? " < " : " >= ");
-                queryToAddTo.Sql.Append(rightPrefix);
-                queryToAddTo.Sql.Append(rightMapping.AllDataColsByObjAttrs[lesser.RightProperty]);
+                queryToAddTo.Sql.Append(rightMapping.AllDataColsByObjAttrs[expression.RightProperty]);
             }
             else if (expr is AbstractPropertyValueJoinExpression)
             {
@@ -501,6 +737,12 @@ namespace Azavea.Open.DAO.SQL
             // Remember to close the parend.
             queryToAddTo.Sql.Append(")");
             return true;
+        }
+
+        private class ExtraJoinInfo : JoinInfo
+        {
+            public string Alias;
+            public string Prefix;
         }
     }
 }

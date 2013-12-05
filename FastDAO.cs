@@ -42,7 +42,7 @@ namespace Azavea.Open.DAO
     /// data source.  It is meant to have high performance on throughput of large numbers of objects.
     /// It does not support every possible sophistication that an ORM system can have.
     /// </summary>
-    public class FastDAO<T> : IFastDaoInserter<T>, IFastDaoUpdater<T>, IFastDaoDeleter<T>, IFastDaoReader<T> where T : class, new()
+    public class FastDAO<T> : IFastDaoInserter<T>, IFastDaoUpdater<T>, IFastDaoDeleter<T>, IFastDaoReader<T>, IFastDaoJoiner<T> where T : class, new()
     {
         /// <summary>
         /// This is the value that will be returned from methods that return a number of rows
@@ -1108,9 +1108,20 @@ namespace Azavea.Open.DAO
                              : rightDao.GetDataObjectFromReader(reader, colNumsByName, rightPrefix);
             return new JoinResult<T, R>(leftObj, rightObj);
         }
+        #endregion
 
+        #region MultiJoin Support
+
+        /// <summary>
+        /// Prepares this DAO for being joined to others
+        /// </summary>
+        /// <param name="daoCrit">The criteria for the DAO</param>
+        /// <param name="daoAlias">An alias used to determine which DAO a join criteria applies to.
+        ///                        Not necessary unless the same DAO will be joined more than once</param>
+        /// <returns>An intermediary type which can be joined to other DAOs or retrieve data using Get</returns>
+        public IFastDaoJoinReader<T> PrepareJoin(DaoCriteria daoCrit = null, string daoAlias = null)
         {
-
+            return new FastDAOJoinReader<T>(daoCrit, daoAlias, this);
         }
 
         #endregion
@@ -1518,7 +1529,7 @@ namespace Azavea.Open.DAO
 
         /// <summary>
         /// Reads all records from the reader, creating objects and inserting them into
-        /// the parameters hashtable as a collection called "items".  An exception on
+        /// the parameters hashtable as a collection called "items".  An exception onde
         /// any one record will cause this method to fail.
         /// </summary>
         protected virtual void CreateObjectsFromReader(Hashtable parameters, IDataReader reader)

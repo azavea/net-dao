@@ -31,6 +31,11 @@ namespace Azavea.Open.DAO
     public interface IDaJoinQuery : IDaQuery
     {
         /// <summary>
+        /// The full list of prefixes used when getting column out of the IDataReader.
+        /// </summary>
+        /// <returns>An array of column prefixes (i.e. ["table_A.", "table_B."])</returns>
+        string[] GetPrefixes();
+        /// <summary>
         /// The prefix that should be used to get the left table's columns out of the IDataReader
         /// when accessing them by name.
         /// </summary>

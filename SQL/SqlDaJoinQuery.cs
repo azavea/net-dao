@@ -21,25 +21,29 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
 
+using System;
+using System.Collections.Generic;
+
 namespace Azavea.Open.DAO.SQL
 {
     /// <summary>
     /// A SQL query that joins two tables, can be run by the SqlDaLayer.
     /// </summary>
-    public class SqlDaJoinQuery : SqlDaQuery, IDaJoinQuery
+    public class SqlDaJoinQuery : SqlDaQuery, IDaJoinQuery, IDaMultiJoinQuery
     {
-        private string _leftPrefix;
-        private string _rightPrefix;
+        private string[] _prefixes;
 
         /// <summary>
         /// Populates the prefix strings.
         /// </summary>
-        /// <param name="left">Prefix for columns from the left table.</param>
-        /// <param name="right">Prefix for columns from the right table.</param>
-        public void SetPrefixes(string left, string right)
+        /// <param name="prefixes">Prefixes for columns from tables.</param>
+        public void SetPrefixes(params string[] prefixes)
         {
-            _leftPrefix = left;
-            _rightPrefix = right;
+            if (prefixes.Length < 2)
+            {
+                throw new ArgumentException("Must provide at least 2 table prefixes.");
+            }
+            _prefixes = prefixes;
         }
 
         /// <summary>
@@ -49,7 +53,7 @@ namespace Azavea.Open.DAO.SQL
         /// <returns>The prefix for columns in the left table (I.E. "left_table.")</returns>
         public string GetLeftColumnPrefix()
         {
-            return _leftPrefix;
+            return _prefixes[0];
         }
 
         /// <summary>
@@ -59,7 +63,16 @@ namespace Azavea.Open.DAO.SQL
         /// <returns>The prefix for columns in the right table (I.E. "right_table.")</returns>
         public string GetRightColumnPrefix()
         {
-            return _rightPrefix;
+            return _prefixes[1];
+        }
+
+        /// <summary>
+        /// The full list of prefixes.
+        /// </summary>
+        /// <returns>An array of column prefixes (i.e. ["table_A.", "table_B."])</returns>
+        public string[] GetPrefixes()
+        {
+            return _prefixes;
         }
     }
 }
