@@ -1079,8 +1079,8 @@ namespace Azavea.Open.DAO
             List<JoinResult<T, R>> items = new List<JoinResult<T, R>>();
             int rowNum = 0;
             Dictionary<string, int> colNums = DbCaches.StringIntDicts.Get();
-            PopulateColNums(reader, colNums, leftPrefix);
-            rightDao.PopulateColNums(reader, colNums, rightPrefix);
+            FastDAOHelper.PopulateColNums(reader, _classMap, colNums, leftPrefix);
+            FastDAOHelper.PopulateColNums(reader, rightDao.ClassMap, colNums, rightPrefix);
             while (reader.Read())
             {
                 if (rowNum++ >= start)
@@ -1100,44 +1100,17 @@ namespace Azavea.Open.DAO
                                                             IDictionary<string, int> colNumsByName, string leftPrefix, string rightPrefix,
                                                             FastDAO<R> rightDao) where R : class, new()
         {
-            T leftObj = IsRowNull(reader, colNumsByName, leftPrefix)
+            T leftObj = FastDAOHelper.IsRowNull(reader, colNumsByName, leftPrefix, _classMap)
                             ? default(T)
                             : GetDataObjectFromReader(reader, colNumsByName, leftPrefix);
-            R rightObj = rightDao.IsRowNull(reader, colNumsByName, rightPrefix)
+            R rightObj = FastDAOHelper.IsRowNull(reader, colNumsByName, rightPrefix, rightDao.ClassMap)
                              ? default(R)
                              : rightDao.GetDataObjectFromReader(reader, colNumsByName, rightPrefix);
             return new JoinResult<T, R>(leftObj, rightObj);
         }
 
-        private bool IsRowNull(IDataReader reader,
-                               IDictionary<string, int> colNumsByName, string colPrefix)
         {
-            IEnumerable<string> colNamesToCheck;
-            // If there are ID columns, we just need to check if those are null.  ID columns
-            // are presumably not allowed to be null.
-            if (_classMap.IdDataColsByObjAttrs.Count > 0)
-            {
-                colNamesToCheck = _classMap.IdDataColsByObjAttrs.Values;
-            }
-                // Otherwise, we need to check all columns.  Even that is a hacky check
-                // since it is entirely possible to have a row with all nulls in it, but
-                // it's the best we can do.
-            else
-            {
-                colNamesToCheck = _classMap.AllDataColsByObjAttrs.Values;
-            }
 
-            // Now check if they're all null.
-            bool allNull = true;
-            foreach (string colName in colNamesToCheck)
-            {
-                if (!reader.IsDBNull(colNumsByName[colPrefix + colName]))
-                {
-                    allNull = false;
-                    break;
-                }
-            }
-            return allNull;
         }
 
         #endregion
@@ -1500,33 +1473,7 @@ namespace Azavea.Open.DAO
         #endregion
 
         #region Internal Methods For DB -> Object
-        /// <summary>
-        /// Populates the dictionary of column name to index mappings, so that
-        /// we can minimize the number of times we call GetOrdinal.
-        /// </summary>
-        /// <param name="reader">Reader that has been generated from some query.</param>
-        /// <param name="colNums">Mapping dictionary to populate.</param>
-        /// <param name="colNamePrefix">The prefix (if any) to use for looking up our
-        ///                             columns from the data reader.  I.E. "TableName." or
-        ///                             "TableAlias." or whatever.</param>
-        private void PopulateColNums(IDataReader reader,
-                                     IDictionary<string, int> colNums, string colNamePrefix)
-        {
-            foreach (string colName in _classMap.AllDataColsByObjAttrs.Values)
-            {
-                string prefixedName = colNamePrefix + colName;
-                try
-                {
-                    colNums[prefixedName] = reader.GetOrdinal(prefixedName);
-                }
-                catch (Exception e)
-                {
-                    throw new LoggingException("The " + _classMap + " has attribute '" +
-                                               _classMap.AllObjAttrsByDataCol[colName] + "' mapped to column '" + colName + 
-                                               "', but that column was not present in the results of our query.", e);
-                }
-            }
-        }
+        
 
         /// <summary>
         /// Given an object and a (data source) column name
@@ -1539,17 +1486,7 @@ namespace Azavea.Open.DAO
         protected virtual void SetValueOnObject(T dataObj, ClassMapping classMap,
                                                 string colName, object memberValue)
         {
-            MemberInfo info = null;
-            try
-            {
-                info = classMap.AllObjMemberInfosByDataCol[colName];
-                SetValueOnObjectProperty(dataObj, memberValue, info);
-            }
-            catch (Exception e)
-            {
-                throw new LoggingException("Unable to set value (" + memberValue + ") from column " + colName +
-                    " to member " + (info == null ? "<null>" : info.Name) + " on type " + classMap.TypeName, e);
-            }
+            FastDAOHelper.SetValueOnObject(dataObj, classMap, colName, memberValue, _dataAccessLayer);
         }
 
         /// <summary>
@@ -1561,24 +1498,7 @@ namespace Azavea.Open.DAO
         /// <param name="info">The metadata pertaining to the object property (taken from the ClassMapping)</param>
         protected virtual void SetValueOnObjectProperty(T dataObj, object memberValue, MemberInfo info)
         {
-            // Don't call MemberType getter twice
-            MemberTypes type = info.MemberType;
-            if (type == MemberTypes.Field)
-            {
-                FieldInfo fInfo = ((FieldInfo) info);
-                object newValue = memberValue == null
-                                      ? null
-                                      : _dataAccessLayer.CoerceType(fInfo.FieldType, memberValue);
-                fInfo.SetValue(dataObj, newValue);
-            }
-            else if (type == MemberTypes.Property)
-            {
-                PropertyInfo pInfo = ((PropertyInfo) info);
-                object newValue = memberValue == null
-                                      ? null
-                                      : _dataAccessLayer.CoerceType(pInfo.PropertyType, memberValue);
-                pInfo.SetValue(dataObj, newValue, null);
-            }
+            FastDAOHelper.SetValueOnObjectProperty(dataObj, memberValue, info, _dataAccessLayer);
         }
 
         /// <summary>
@@ -1593,26 +1513,7 @@ namespace Azavea.Open.DAO
         protected virtual T GetDataObjectFromReader(IDataReader reader,
                                                     IDictionary<string, int> colNums, string colPrefix)
         {
-            T retVal = new T();
-            foreach (string colName in _classMap.AllDataColsByObjAttrs.Values)
-            {
-                // It is possible for the object to have fields that don't exist
-                // in the database (or at least in the cols returned by this query).
-                if (colName != null)
-                {
-                    // Prefix the name with the prefix.
-                    int colIndex = colNums[colPrefix + colName];
-                    if (!reader.IsDBNull(colIndex))
-                    {
-                        SetValueOnObject(retVal, _classMap, colName, reader[colIndex]);
-                    }
-                    else
-                    {
-                        SetValueOnObject(retVal, _classMap, colName, null);
-                    }
-                }
-            }
-            return retVal;
+            return FastDAOHelper.GetDataObjectFromReader<T>(reader, colNums, colPrefix, _classMap, _dataAccessLayer);
         }
 
         /// <summary>
@@ -1635,7 +1536,7 @@ namespace Azavea.Open.DAO
             IList<T> items = new List<T>();
             int rowNum = 0;
             Dictionary<string, int> colNums = DbCaches.StringIntDicts.Get();
-            PopulateColNums(reader, colNums, null);
+            FastDAOHelper.PopulateColNums(reader, _classMap, colNums, null);
             while (reader.Read())
             {
                 if (rowNum++ >= start)
@@ -1666,7 +1567,7 @@ namespace Azavea.Open.DAO
             P itsParams = (P)parameters["parameters"];
             Dictionary<string, int> colNums = DbCaches.StringIntDicts.Get();
 
-            PopulateColNums(reader, colNums, null);
+            FastDAOHelper.PopulateColNums(reader, _classMap, colNums, null);
             while (reader.Read())
             {
                 count++;
