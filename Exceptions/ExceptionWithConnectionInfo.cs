@@ -43,5 +43,15 @@ namespace Azavea.Open.DAO.Exceptions
             : base(message + "  Connection info: " + desc, e)
         {
         }
+
+        /// <summary>
+        /// An error occurred doing something with a database.
+        /// </summary>
+        /// <param name="message">What happened.</param>
+        /// <param name="desc">The connection info will be appended to the message.</param>
+        public ExceptionWithConnectionInfo(string message, IConnectionDescriptor desc)
+            : base(message + "  Connection info: " + desc)
+        {
+        }
     }
 }
