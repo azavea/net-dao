@@ -1524,7 +1524,26 @@ namespace Azavea.Open.DAO
         protected virtual T GetDataObjectFromReader(IDataReader reader,
                                                     IDictionary<string, int> colNums, string colPrefix)
         {
-            return FastDAOHelper.GetDataObjectFromReader<T>(reader, colNums, colPrefix, _classMap, _dataAccessLayer);
+            T retVal = new T();
+            foreach (string colName in _classMap.AllDataColsByObjAttrs.Values)
+            {
+                // It is possible for the object to have fields that don't exist
+                // in the database (or at least in the cols returned by this query).
+                if (colName != null)
+                {
+                    // Prefix the name with the prefix.
+                    int colIndex = colNums[colPrefix + colName];
+                    if (!reader.IsDBNull(colIndex))
+                    {
+                        SetValueOnObject(retVal, _classMap, colName, reader[colIndex]);
+                    }
+                    else
+                    {
+                        SetValueOnObject(retVal, _classMap, colName, null);
+                    }
+                }
+            }
+            return retVal;
         }
 
         /// <summary>
