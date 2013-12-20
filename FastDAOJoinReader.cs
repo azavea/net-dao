@@ -95,6 +95,7 @@ namespace Azavea.Open.DAO
             {
                 throw new ArgumentException("You cannot use the same alias multiple times", "criteria");
             }
+            knownAliases.Add(nextDaoAlias);
             if (criteria.Expressions.Any(joinExpression => !knownAliases.Contains(joinExpression.OtherDaoAlias)))
             {
                 throw new ArgumentException("Join criteria aliases must match an already provided DAO alias", "criteria");
