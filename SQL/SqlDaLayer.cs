@@ -503,7 +503,7 @@ namespace Azavea.Open.DAO.SQL
 
         /// <summary>
         /// Converts the list of expressions from this criteria into SQL, and appends to the 
-        /// given string builder.
+        /// given query.
         /// </summary>
         /// <param name="queryToAddTo">Query we're adding the expression to.</param>
         /// <param name="boolType">Whether to AND or OR the expressions together.</param>
@@ -779,18 +779,19 @@ namespace Azavea.Open.DAO.SQL
                 if (crit.Orders.Count > 0)
                 {
                     queryToAddTo.Sql.Append(" ORDER BY ");
-                    OrderListToSql(queryToAddTo.Sql, crit, mapping);
+                    OrderListToSql(queryToAddTo, crit, mapping);
                 }
             }
         }
         /// <summary>
         /// Converts the list of SortOrders from this criteria into SQL, and appends to the
-        /// given string builder.
+        /// given query.
         /// </summary>
-        protected void OrderListToSql(StringBuilder orderClauseToAddTo, DaoCriteria crit,
+        protected void OrderListToSql(SqlDaQuery queryToAddTo, DaoCriteria crit,
                                       ClassMapping mapping)
         {
             bool first = true;
+            var orderClauseToAddTo = queryToAddTo.Sql;
             foreach (SortOrder order in crit.Orders)
             {
                 if (first)
@@ -821,6 +822,13 @@ namespace Azavea.Open.DAO.SQL
                         break;
                     case SortType.Computed:
                         orderClauseToAddTo.Append(order.Property);
+                        if (order.Parameters != null)
+                        {
+                            foreach (object aParam in order.Parameters)
+                            {
+                                queryToAddTo.Params.Add(aParam);
+                            }
+                        }
                         break;
                     default:
                         throw new NotSupportedException("Sort type '" + order.Direction + "' not supported.");

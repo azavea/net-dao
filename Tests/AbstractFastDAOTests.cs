@@ -22,6 +22,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using Azavea.Open.Common.Collections;
 using Azavea.Open.DAO.Criteria;
@@ -637,6 +638,20 @@ namespace Azavea.Open.DAO.Tests
             int count = _nameDictDAO.GetCount(crit);
 
             Assert.Greater(count, 1, "Should be more than one name in the DB.");
+        }
+
+        /// <exclude />
+        [Test]
+        public void TestGetWithComputedSort()
+        {
+            DaoCriteria crit = new DaoCriteria();
+            var nameField = _nameDAO.ClassMap.AllDataColsByObjAttrs["Name"];
+            var sql = string.Format("CASE WHEN {0} LIKE ? THEN 1 ELSE 2 END", nameField);
+            crit.Orders.Add(new SortOrder(sql, SortType.Computed, new [] { "Michael" }));
+
+            var name = _nameDAO.GetFirst(crit);
+
+            Assert.AreEqual(name.Name, "Michael", "Should always place Michael first");
         }
 
         /// <exclude />

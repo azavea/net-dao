@@ -22,6 +22,7 @@
 // OTHER DEALINGS IN THE SOFTWARE.
 
 using System;
+using System.Collections;
 
 namespace Azavea.Open.DAO.Criteria
 {
@@ -35,10 +36,17 @@ namespace Azavea.Open.DAO.Criteria
         /// The data class' property to sort on.
         /// </summary>
         public readonly string Property;
+
         /// <summary>
         /// The direction to sort based on the Property.
         /// </summary>
         public readonly SortType Direction;
+
+        /// <summary>
+        /// Parameters for the expression, if any.  If none, may be null or empty.
+        /// Only used when SortType is SortType.Computed
+        /// </summary>
+        public readonly IEnumerable Parameters;
 
         /// <summary>
         /// A simple class that holds a single sort criterion.
@@ -52,7 +60,7 @@ namespace Azavea.Open.DAO.Criteria
         /// </summary>
         /// <param name="property">The data class' property to sort on.</param>
         /// <param name="direction">The direction to sort based on the Property.</param>
-        public SortOrder(string property, SortType direction)
+        public SortOrder(string property, SortType direction, IEnumerable parameters = null)
         {
             if (property == null)
             {
@@ -61,6 +69,7 @@ namespace Azavea.Open.DAO.Criteria
             }
             Property = property;
             Direction = direction;
+            Parameters = parameters ?? new ArrayList();
         }
 
         ///<summary>

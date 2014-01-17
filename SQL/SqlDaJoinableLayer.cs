@@ -180,7 +180,7 @@ namespace Azavea.Open.DAO.SQL
             if (crit.Orders.Count > 0)
             {
                 retVal.Sql.Append(" ORDER BY ");
-                JoinOrderListToSql(retVal.Sql, crit, leftMapping, rightMapping, leftPrefix, rightPrefix);
+                JoinOrderListToSql(retVal, crit, leftMapping, rightMapping, leftPrefix, rightPrefix);
             }
 
             // Don't return the objects to the caches, we'll do that in DisposeOfQuery.
@@ -324,7 +324,7 @@ namespace Azavea.Open.DAO.SQL
             if (!isCount && orders.Count > 0)
             {
                 retVal.Sql.Append(" ORDER BY ");
-                MultiJoinOrderListToSql(retVal.Sql, orders, extraJoinInfoByDaoAlias);
+                MultiJoinOrderListToSql(retVal, orders, extraJoinInfoByDaoAlias);
             }
 
             // Don't return the objects to the caches, we'll do that in DisposeOfQuery.
@@ -534,12 +534,13 @@ namespace Azavea.Open.DAO.SQL
 
         /// <summary>
         /// Converts the list of SortOrders from this criteria into SQL, and appends to the
-        /// given string builder.
+        /// given query.
         /// </summary>
-        private static void JoinOrderListToSql(StringBuilder orderClauseToAddTo, DaoJoinCriteria crit,
+        private static void JoinOrderListToSql(SqlDaQuery queryToAddTo, DaoJoinCriteria crit,
                                                ClassMapping leftMapping, ClassMapping rightMapping, string leftPrefix, string rightPrefix)
         {
             bool first = true;
+            var orderClauseToAddTo = queryToAddTo.Sql;
             foreach (JoinSortOrder order in crit.Orders)
             {
                 if (first)
@@ -562,18 +563,19 @@ namespace Azavea.Open.DAO.SQL
                     mappingToUse = rightMapping;
                     prefixToUse = rightPrefix;
                 }
-                AddOrderToQuery(orderClauseToAddTo, order, prefixToUse, mappingToUse);
+                AddOrderToQuery(queryToAddTo, order, prefixToUse, mappingToUse);
             }
         }
 
         /// <summary>
         /// Converts the list of SortOrders from this criteria into SQL, and appends to the
-        /// given string builder.
+        /// given query.
         /// </summary>
-        private static void MultiJoinOrderListToSql(StringBuilder orderClauseToAddTo, IList<MultiJoinSortOrder> orders,
+        private static void MultiJoinOrderListToSql(SqlDaQuery queryToAddTo, IList<MultiJoinSortOrder> orders,
             IDictionary<string, ExtraJoinInfo> joinInfoByAlias)
         {
             bool first = true;
+            var orderClauseToAddTo = queryToAddTo.Sql;
             foreach (MultiJoinSortOrder order in orders)
             {
                 if (first)
@@ -585,13 +587,14 @@ namespace Azavea.Open.DAO.SQL
                     orderClauseToAddTo.Append(", ");
                 }
                 var joinInfo = joinInfoByAlias[order.DaoAlias];
-                AddOrderToQuery(orderClauseToAddTo, order, joinInfo.Prefix, order.ClassMap);
+                AddOrderToQuery(queryToAddTo, order, joinInfo.Prefix, order.ClassMap);
             }
         }
 
-        private static void AddOrderToQuery(StringBuilder orderClauseToAddTo, SortOrder order, string prefixToUse,
+        private static void AddOrderToQuery(SqlDaQuery queryToAddTo, SortOrder order, string prefixToUse,
                                             ClassMapping mappingToUse)
         {
+            var orderClauseToAddTo = queryToAddTo.Sql;
             switch (order.Direction)
             {
                 case SortType.Asc:
@@ -606,6 +609,13 @@ namespace Azavea.Open.DAO.SQL
                     break;
                 case SortType.Computed:
                     orderClauseToAddTo.Append(order.Property);
+                    if (order.Parameters != null)
+                    {
+                        foreach (object aParam in order.Parameters)
+                        {
+                            queryToAddTo.Params.Add(aParam);
+                        }
+                    }
                     break;
                 default:
                     throw new NotSupportedException("Sort type '" + order.Direction +
@@ -615,7 +625,7 @@ namespace Azavea.Open.DAO.SQL
 
         /// <summary>
         /// Converts the list of expressions from this criteria into SQL, and appends to the 
-        /// given string builder.
+        /// given query.
         /// </summary>
         /// <param name="queryToAddTo">Query we're adding the expression to.</param>
         /// <param name="boolType">Whether to AND or OR the expressions together.</param>
@@ -662,7 +672,7 @@ namespace Azavea.Open.DAO.SQL
 
         /// <summary>
         /// Converts a single JoinExpression to SQL (mapping the columns as appropriate) and appends
-        /// to the given string builder.
+        /// to the given query.
         /// 
         /// Remember to wrap the SQL in parends if necessary.
         /// </summary>
