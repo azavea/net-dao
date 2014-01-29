@@ -60,7 +60,16 @@ namespace Azavea.Open.DAO.Criteria
         /// </summary>
         /// <param name="property">The data class' property to sort on.</param>
         /// <param name="direction">The direction to sort based on the Property.</param>
-        public SortOrder(string property, SortType direction, IEnumerable parameters = null)
+        public SortOrder(string property, SortType direction): this(property, direction, null){}
+
+        /// <summary>
+        /// A simple class that holds a single sort criterion.
+        /// </summary>
+        /// <param name="property">The data class' property to sort on.</param>
+        /// <param name="direction">The direction to sort based on the Property.</param>
+        /// <param name="parameters">Parameters corresponding to the substitution tokens 
+        ///     in the property string</param>
+        public SortOrder(string property, SortType direction, IEnumerable parameters)
         {
             if (property == null)
             {
