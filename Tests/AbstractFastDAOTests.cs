@@ -790,8 +790,8 @@ namespace Azavea.Open.DAO.Tests
             Assert.AreEqual(null, (objs[0])["DateVal"], "first date was wrong.");
             Assert.AreEqual(null, (objs[1])["DateVal"], "second date was wrong.");
             Assert.AreEqual(null, (objs[2])["DateVal"], "third date was wrong.");
-            Assert.AreEqual(new DateTime(2001, 1, 1), (objs[3])["DateVal"], "fourth date was wrong.");
-            Assert.AreEqual(new DateTime(2001, 1, 1), (objs[4])["DateVal"], "fifth date was wrong.");
+            Assert.AreEqual(new DateTime(2001, 1, 1), Convert.ToDateTime(objs[3]["DateVal"]), "fourth date was wrong.");
+            Assert.AreEqual(new DateTime(2001, 1, 1), Convert.ToDateTime(objs[4]["DateVal"]), "fifth date was wrong.");
             Assert.AreEqual(null, (objs[0])["FloatVal"], "first float was wrong.");
             Assert.AreEqual(null, (objs[1])["FloatVal"], "second float was wrong.");
             // Since this is a dictionary and doesn't lend typing to the variable, it may
@@ -1055,40 +1055,40 @@ namespace Azavea.Open.DAO.Tests
                 Assert.AreEqual(1, results[0].Count, "Wrong number of null/nulls.");
                 Assert.AreEqual(null, results[0].GroupValues["IntVal"], "First result had wrong int value.");
                 Assert.AreEqual(null, results[0].GroupValues["BoolVal"], "First result had wrong bool value.");
-                Assert.AreEqual(null, results[0].GroupValues["DateVal"], "First result had wrong bool value.");
+                Assert.AreEqual(null, results[0].GroupValues["DateVal"], "First result had wrong date value.");
                 Assert.AreEqual(1, results[1].Count, "Wrong number of null/trues.");
                 Assert.AreEqual(null, results[1].GroupValues["IntVal"], "Second result had wrong int value.");
                 Assert.AreEqual((expectRealBool ? (object)true : 1), results[1].GroupValues["BoolVal"], "Second result had wrong bool value.");
-                Assert.AreEqual(null, results[1].GroupValues["DateVal"], "Second result had wrong bool value.");
+                Assert.AreEqual(null, results[1].GroupValues["DateVal"], "Second result had wrong date value.");
                 Assert.AreEqual(1, results[2].Count, "Wrong number of 123/trues.");
                 Assert.AreEqual(123, results[2].GroupValues["IntVal"], "Third result had wrong int value.");
                 Assert.AreEqual((expectRealBool ? (object)true : 1), results[2].GroupValues["BoolVal"], "Third result had wrong bool value.");
-                Assert.AreEqual(null, results[2].GroupValues["DateVal"], "Third result had wrong bool value.");
+                Assert.AreEqual(null, results[2].GroupValues["DateVal"], "Third result had wrong date value.");
                 Assert.AreEqual(2, results[3].Count, "Wrong number of 123/trues.");
                 Assert.AreEqual(123, results[3].GroupValues["IntVal"], "Fourth result had wrong int value.");
                 Assert.AreEqual((expectRealBool ? (object)true : 1), results[3].GroupValues["BoolVal"], "Fourth result had wrong bool value.");
-                Assert.AreEqual(new DateTime(2001, 1, 1), results[3].GroupValues["DateVal"],
-                                "Fourth result had wrong bool value.");
+                Assert.AreEqual(new DateTime(2001, 1, 1), Convert.ToDateTime(results[3].GroupValues["DateVal"]),
+                                "Fourth result had wrong date value.");
             }
             else
             {
                 Assert.AreEqual(1, results[0].Count, "Wrong number of 123/true/nulls.");
                 Assert.AreEqual(123, results[0].GroupValues["IntVal"], "First result had wrong int value.");
                 Assert.AreEqual((expectRealBool ? (object)true : 1), results[0].GroupValues["BoolVal"], "First result had wrong bool value.");
-                Assert.AreEqual(null, results[0].GroupValues["DateVal"], "First result had wrong bool value.");
+                Assert.AreEqual(null, results[0].GroupValues["DateVal"], "First result had wrong date value.");
                 Assert.AreEqual(1, results[1].Count, "Wrong number of null/true/nulls.");
                 Assert.AreEqual(null, results[1].GroupValues["IntVal"], "Second result had wrong int value.");
                 Assert.AreEqual((expectRealBool ? (object)true : 1), results[1].GroupValues["BoolVal"], "Second result had wrong bool value.");
-                Assert.AreEqual(null, results[1].GroupValues["DateVal"], "Second result had wrong bool value.");
+                Assert.AreEqual(null, results[1].GroupValues["DateVal"], "Second result had wrong date value.");
                 Assert.AreEqual(1, results[2].Count, "Wrong number of null/null/nulls.");
                 Assert.AreEqual(null, results[2].GroupValues["IntVal"], "Third result had wrong int value.");
                 Assert.AreEqual(null, results[2].GroupValues["BoolVal"], "Third result had wrong bool value.");
-                Assert.AreEqual(null, results[2].GroupValues["DateVal"], "Third result had wrong bool value.");
+                Assert.AreEqual(null, results[2].GroupValues["DateVal"], "Third result had wrong date value.");
                 Assert.AreEqual(2, results[3].Count, "Wrong number of 123/true/Dates.");
                 Assert.AreEqual(123, results[3].GroupValues["IntVal"], "Fourth result had wrong int value.");
                 Assert.AreEqual((expectRealBool ? (object)true : 1), results[3].GroupValues["BoolVal"], "Fourth result had wrong bool value.");
-                Assert.AreEqual(new DateTime(2001, 1, 1), results[3].GroupValues["DateVal"],
-                                "Fourth result had wrong bool value.");
+                Assert.AreEqual(new DateTime(2001, 1, 1), Convert.ToDateTime(results[3].GroupValues["DateVal"]),
+                                "Fourth result had wrong date value.");
             }
         }
 
