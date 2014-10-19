@@ -121,6 +121,11 @@ namespace Azavea.Open.DAO.Tests
             _transactionsLockData = transactionsLockData;
         }
 
+        protected virtual bool TransactionsLockData(IConnectionDescriptor connDesc)
+        {
+            return _transactionsLockData;
+        }
+
         /// <summary>
         /// For child classes whose data access layers implement IDaDdlLayer, this will drop
         /// and recreate all the tables used by this test.  Otherwise it will just truncate them.
@@ -531,7 +536,7 @@ namespace Azavea.Open.DAO.Tests
             InsertName(dao, tx, name, 0);
             // Verify the transaction connection CAN see them.
             AssertOneName(dao, tx, name, "Record inserted on transaction");
-            if (!_transactionsLockData)
+            if (!TransactionsLockData(_connDesc))
             {
                 // Verify a non-transaction connection cannot see them yet, since they aren't committed.
                 AssertNoName(dao, name, "Record hasn't been committed");
@@ -547,7 +552,7 @@ namespace Azavea.Open.DAO.Tests
             dao.Delete(tx, crit);
             // Verify the transaction connection cannot see it.
             AssertNoName(dao, tx, name, "Record has been deleted");
-            if (!_transactionsLockData)
+            if (!TransactionsLockData(_connDesc))
             {
                 // Verify a non-transaction connection can still see it.
                 AssertOneName(dao, name, "Deletion is not committed");
