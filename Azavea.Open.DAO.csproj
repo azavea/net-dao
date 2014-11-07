@@ -47,9 +47,9 @@
     <Reference Include="Azavea.Utilities.Common">
       <HintPath>packages\Azavea.Utilities.Common.3.3.0\lib\net20\Azavea.Utilities.Common.dll</HintPath>
     </Reference>
-    <Reference Include="GeoAPI, Version=1.7.1.0, Culture=neutral, processorArchitecture=MSIL">
+    <Reference Include="GeoAPI, Version=1.7.3.0, Culture=neutral, PublicKeyToken=a1a0da7def465678, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>packages\GeoAPI.1.7.1.1\lib\net20\GeoAPI.dll</HintPath>
+      <HintPath>packages\GeoAPI.1.7.3.1\lib\net35-client\GeoAPI.dll</HintPath>
     </Reference>
     <Reference Include="log4net">
       <HintPath>packages\log4net.1.2.11\lib\net20-full\log4net.dll</HintPath>
